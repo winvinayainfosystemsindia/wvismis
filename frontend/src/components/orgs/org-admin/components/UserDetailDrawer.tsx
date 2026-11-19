@@ -15,6 +15,7 @@ import {
 	CalendarToday as JoinIcon
 } from '@mui/icons-material';
 import type { TeamMember } from '../../../../models/user';
+import { ROLE_LABELS } from '../../../../models/user';
 import DetailDrawer from '../../../common/drawer/DetailDrawer';
 import ContextMenu, { type ActionMenuItem } from '../../../common/action-menu/ContextMenu';
 
@@ -104,7 +105,7 @@ export const UserDetailDrawer: React.FC<UserDetailDrawerProps> = ({
 	const headerExtra = (
 		<Box display="flex" alignItems="center" gap={1.5} sx={{ mt: 1 }}>
 			<Chip
-				label={user.role.toUpperCase()}
+				label={(ROLE_LABELS[user.role] || user.role).toUpperCase()}
 				size="small"
 				sx={{
 					fontWeight: 800,
@@ -219,8 +220,8 @@ export const UserDetailDrawer: React.FC<UserDetailDrawerProps> = ({
 								<Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
 									Assigned Workspace Role
 								</Typography>
-								<Typography variant="body2" sx={{ fontWeight: 700, mt: 0.25, color: 'text.primary', textTransform: 'capitalize' }}>
-									{user.role}
+								<Typography variant="body2" sx={{ fontWeight: 700, mt: 0.25, color: 'text.primary' }}>
+									{ROLE_LABELS[user.role] || user.role}
 								</Typography>
 							</Box>
 						</Box>

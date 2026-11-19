@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Dialog, Box, TextField, MenuItem, InputAdornment } from '@mui/material';
+import { Dialog, Box, TextField, MenuItem, InputAdornment, Typography } from '@mui/material';
 import { Person, Badge, MailOutline, AssignmentInd, SupervisedUserCircleOutlined } from '@mui/icons-material';
 import { EnterpriseForm, type FormStep } from '../../common/form';
 import { useAppDispatch, useAppSelector } from '../../../store/hooks';
 import { updateTeamUser } from '../../../store/slices/userSlice';
-import { USER_ROLES, type UserRole, type TeamMember } from '../../../models/user';
+import { USER_ROLES, ROLE_LABELS, ROLE_DESCRIPTIONS, type UserRole, type TeamMember } from '../../../models/user';
 
 interface EditOrgUserDialogProps {
 	open: boolean;
@@ -21,7 +21,7 @@ export const EditOrgUserDialog: React.FC<EditOrgUserDialogProps> = ({ open, user
 		username: '',
 		email: '',
 		full_name: '',
-		role: 'developer' as UserRole,
+		role: 'member' as UserRole,
 		reporting_manager_id: '' as number | '',
 	});
 	const [loading, setLoading] = useState(false);
@@ -34,7 +34,7 @@ export const EditOrgUserDialog: React.FC<EditOrgUserDialogProps> = ({ open, user
 				username: user.username || '',
 				email: user.email || '',
 				full_name: user.full_name || '',
-				role: user.role || 'developer',
+				role: user.role || 'member',
 				reporting_manager_id: user.reporting_manager_id || '',
 			});
 			setError(null);
@@ -160,6 +160,7 @@ export const EditOrgUserDialog: React.FC<EditOrgUserDialogProps> = ({ open, user
 						value={formData.role}
 						onChange={(e) => handleChange('role', e.target.value)}
 						disabled={loading}
+						helperText={ROLE_DESCRIPTIONS[formData.role] || 'Select an organization access role'}
 						InputProps={{
 							startAdornment: (
 								<InputAdornment position="start">
@@ -170,10 +171,14 @@ export const EditOrgUserDialog: React.FC<EditOrgUserDialogProps> = ({ open, user
 					>
 						{USER_ROLES.map((role) => (
 							<MenuItem key={role} value={role}>
-								{role
-									.split('_')
-									.map((w) => w[0].toUpperCase() + w.slice(1))
-									.join(' ')}
+								<Box sx={{ py: 0.25 }}>
+									<Typography variant="body2" sx={{ fontWeight: 600 }}>
+										{ROLE_LABELS[role] || role}
+									</Typography>
+									<Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontSize: '0.72rem' }}>
+										{ROLE_DESCRIPTIONS[role]}
+									</Typography>
+								</Box>
 							</MenuItem>
 						))}
 					</TextField>

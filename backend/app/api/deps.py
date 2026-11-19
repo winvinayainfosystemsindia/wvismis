@@ -178,7 +178,7 @@ def require_roles(allowed_roles: list):
     """
 
     async def role_checker(current_user: User = Depends(get_current_user)) -> User:
-        if current_user.is_superuser or current_user.role == UserRole.SUPER_ADMIN:
+        if current_user.is_superuser or current_user.role in (UserRole.SUPER_ADMIN, UserRole.OWNER):
             return current_user
 
         allowed_role_values = [

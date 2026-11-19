@@ -4,7 +4,7 @@ import { Person, Badge, MailOutline, AssignmentInd } from '@mui/icons-material';
 import { EnterpriseForm, type FormStep } from '../../../common/form';
 import { useAppDispatch } from '../../../../store/hooks';
 import { inviteTeamUser } from '../../../../store/slices/userSlice';
-import { USER_ROLES, type UserRole } from '../../../../models/user';
+import { USER_ROLES, ROLE_LABELS, ROLE_DESCRIPTIONS, type UserRole } from '../../../../models/user';
 import api from '../../../../services/api';
 
 interface InviteOrgUserDialogProps {
@@ -13,7 +13,7 @@ interface InviteOrgUserDialogProps {
 	onSuccess: (message: string) => void;
 }
 
-const initialForm = { username: '', email: '', full_name: '', role: 'developer' as UserRole };
+const initialForm = { username: '', email: '', full_name: '', role: 'member' as UserRole };
 
 export const InviteOrgUserDialog: React.FC<InviteOrgUserDialogProps> = ({ open, onClose, onSuccess }) => {
 	const dispatch = useAppDispatch();
@@ -219,6 +219,7 @@ export const InviteOrgUserDialog: React.FC<InviteOrgUserDialogProps> = ({ open, 
 					<TextField
 						required select fullWidth label="Role" value={formData.role}
 						onChange={(e) => handleChange('role', e.target.value)} disabled={loading}
+						helperText={ROLE_DESCRIPTIONS[formData.role] || 'Select an organization access role'}
 						InputProps={{
 							startAdornment: (
 								<InputAdornment position="start">
@@ -227,9 +228,16 @@ export const InviteOrgUserDialog: React.FC<InviteOrgUserDialogProps> = ({ open, 
 							)
 						}}
 					>
-						{USER_ROLES.filter((r) => r !== 'admin').map((role) => (
+						{USER_ROLES.map((role) => (
 							<MenuItem key={role} value={role}>
-								{role.split('_').map((w) => w[0].toUpperCase() + w.slice(1)).join(' ')}
+								<Box sx={{ py: 0.25 }}>
+									<Typography variant="body2" sx={{ fontWeight: 600 }}>
+										{ROLE_LABELS[role] || role}
+									</Typography>
+									<Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontSize: '0.72rem' }}>
+										{ROLE_DESCRIPTIONS[role]}
+									</Typography>
+								</Box>
 							</MenuItem>
 						))}
 					</TextField>

@@ -18,15 +18,18 @@ class UserRole(str, enum.Enum):
     """User role enumeration for WVISMIS multi-tenant RBAC"""
     SUPER_ADMIN = "super_admin"
     ORG_ADMIN = "org_admin"
+    OWNER = "owner"
     ADMIN = "admin"
     MANAGER = "manager"
+    MEMBER = "member"
+    VIEWER = "viewer"
+    USER = "user"
+    DEVELOPER = "developer"
     SOURCING = "sourcing"
     TRAINER = "trainer"
     COUNSELOR = "counselor"
     PLACEMENT = "placement"
     PROJECT_COORDINATOR = "project_coordinator"
-    DEVELOPER = "developer"
-    USER = "user"
 
 
 class User(BaseModel, TenantMixin):
@@ -86,7 +89,7 @@ class User(BaseModel, TenantMixin):
 
     role: Mapped[UserRole] = mapped_column(
         Enum(UserRole, values_callable=lambda x: [e.value for e in x]),
-        default=UserRole.USER,
+        default=UserRole.MEMBER,
         nullable=False,
         index=True,
     )

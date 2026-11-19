@@ -15,7 +15,7 @@ class UserBase(BaseModel):
     full_name: Optional[str] = Field(None, max_length=255)
     is_active: bool = True
     is_verified: bool = False
-    role: UserRole = UserRole.USER
+    role: UserRole = UserRole.MEMBER
     mobile: Optional[str] = Field(None, max_length=20)
     department: Optional[str] = Field(None, max_length=100)
     designation: Optional[str] = Field(None, max_length=100)

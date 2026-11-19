@@ -59,6 +59,18 @@ async def lifespan(app: FastAPI):
                 END $$;
             """))
 
+        # Ensure new roles exist in Postgres enum type if userrole enum is used
+        try:
+            async with engine.connect() as conn:
+                await conn.execution_options(isolation_level="AUTOCOMMIT")
+                for val in ("owner", "member", "viewer"):
+                    try:
+                        await conn.execute(text(f"ALTER TYPE userrole ADD VALUE IF NOT EXISTS '{val}'"))
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+
         async with AsyncSessionLocal() as session:
             await init_parent_org_and_superuser(session)
     except Exception as exc:

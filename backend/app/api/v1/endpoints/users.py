@@ -312,11 +312,14 @@ async def invite_user(
     db: AsyncSession = Depends(get_db),
 ):
     """Invite a new user into the active Organization."""
-    role_str = payload.get("role", "user")
-    try:
-        role_enum = UserRole(role_str)
-    except ValueError:
-        role_enum = UserRole.USER
+    role_str = payload.get("role", "member").lower()
+    if role_str == "user":
+        role_enum = UserRole.MEMBER
+    else:
+        try:
+            role_enum = UserRole(role_str)
+        except ValueError:
+            role_enum = UserRole.MEMBER
 
     user_in = UserCreate(
         email=payload["email"],

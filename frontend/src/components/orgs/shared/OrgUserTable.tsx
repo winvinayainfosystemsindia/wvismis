@@ -3,7 +3,7 @@ import { TableRow, TableCell, Chip, Typography, useMediaQuery, useTheme, Button,
 import { Delete } from '@mui/icons-material';
 import { useAppDispatch, useAppSelector } from '../../../store/hooks';
 import { fetchTeamUsers } from '../../../store/slices/userSlice';
-import type { TeamMember } from '../../../models/user';
+import { type TeamMember, ROLE_LABELS } from '../../../models/user';
 import { DataTable } from '../../common/table';
 import { useOrgUserTableConfig, getRoleColor } from './OrgUserTableConfig';
 
@@ -99,7 +99,7 @@ export const OrgUserTable: React.FC<OrgUserTableProps> = ({
 				{!isMedium && <TableCell><Typography variant="body2" color="text.secondary">{user.username}</Typography></TableCell>}
 				{!isMobile && (
 					<TableCell>
-						<Chip label={user.role.toUpperCase()} color={getRoleColor(user.role)} size="small" variant="outlined" sx={{ fontWeight: 600, borderRadius: 0, fontSize: '0.75rem' }} />
+						<Chip label={(ROLE_LABELS[user.role] || user.role).toUpperCase()} color={getRoleColor(user.role)} size="small" variant="outlined" sx={{ fontWeight: 600, borderRadius: 0, fontSize: '0.75rem' }} />
 					</TableCell>
 				)}
 				<TableCell>

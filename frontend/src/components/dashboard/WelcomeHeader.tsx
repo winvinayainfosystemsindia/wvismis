@@ -1,0 +1,53 @@
+import React from 'react';
+import { Box, Typography } from '@mui/material';
+import { useAppSelector } from '../../store/hooks';
+import { useUserFlow } from '../../hooks/useUserFlow';
+
+const FLOW_SUBTITLE: Record<ReturnType<typeof useUserFlow>, string> = {
+    super_admin: "Here's how the platform is doing today",
+    org_admin: "Here's how your team is doing today",
+    org_team: "Here's what's on your plate today",
+    individual: "Here's your workspace at a glance today",
+};
+
+const WelcomeHeader: React.FC = () => {
+    const { user } = useAppSelector((state) => state.auth);
+    const flow = useUserFlow();
+
+    const getGreeting = () => {
+        const hour = new Date().getHours();
+        if (hour < 12) return 'Good Morning';
+        if (hour < 17) return 'Good Afternoon';
+        return 'Good Evening';
+    };
+
+    const formattedDate = new Intl.DateTimeFormat('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    }).format(new Date());
+
+    return (
+        <Box sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+            flexWrap: 'wrap',
+            gap: 2
+        }}>
+            <Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                    <Typography variant="h4" sx={{ fontWeight: 700, color: 'text.primary', letterSpacing: '-0.02em' }}>
+                        {getGreeting()}, {user?.full_name?.split(' ')[0] || user?.username}! 👋
+                    </Typography>
+                </Box>
+                <Typography variant="body1" sx={{ color: 'text.secondary', fontWeight: 500 }}>
+                    {FLOW_SUBTITLE[flow]} · {formattedDate}.
+                </Typography>
+            </Box>
+        </Box>
+    );
+};
+
+export default WelcomeHeader;

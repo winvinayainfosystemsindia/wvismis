@@ -35,6 +35,23 @@ class BaseRepository(Generic[ModelType]):
         result = await self.db.execute(query)
         return result.scalar_one_or_none()
 
+    async def get_by_public_id(
+        self,
+        public_id: Any,
+        include_deleted: bool = False,
+        organization_id: Optional[int] = None,
+    ) -> Optional[ModelType]:
+        """Get a single record by UUID public_id"""
+        if not hasattr(self.model, "public_id"):
+            return None
+        query = select(self.model).where(getattr(self.model, "public_id") == public_id)
+        if not include_deleted:
+            query = query.where(self.model.is_deleted == False)
+        if organization_id is not None and hasattr(self.model, "organization_id"):
+            query = query.where(getattr(self.model, "organization_id") == organization_id)
+        result = await self.db.execute(query)
+        return result.scalar_one_or_none()
+
     async def get_by_fields(
         self,
         include_deleted: bool = False,

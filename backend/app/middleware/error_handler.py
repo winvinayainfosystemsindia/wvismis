@@ -2,6 +2,7 @@
 
 from typing import Callable
 from fastapi import Request, status
+from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from sqlalchemy.exc import SQLAlchemyError
@@ -17,18 +18,19 @@ class ErrorHandlerMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         except ValidationError as e:
-            logger.error(f"Validation error: {str(e)}")
+            logger.error(f"Validation error on {request.url.path}: {str(e)}")
+            safe_errors = e.errors(include_input=False, include_context=False)
             return JSONResponse(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                content={
+                content=jsonable_encoder({
                     "error": "Validation Error",
-                    "detail": e.errors(),
+                    "detail": safe_errors,
                     "message": "Invalid input data",
-                },
+                }),
             )
 
         except SQLAlchemyError as e:
-            logger.error(f"Database error: {str(e)}")
+            logger.error(f"Database error on {request.url.path}: {str(e)}")
             return JSONResponse(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 content={
@@ -38,7 +40,7 @@ class ErrorHandlerMiddleware(BaseHTTPMiddleware):
             )
 
         except ValueError as e:
-            logger.error(f"Value error: {str(e)}")
+            logger.error(f"Value error on {request.url.path}: {str(e)}")
             return JSONResponse(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 content={
@@ -48,7 +50,7 @@ class ErrorHandlerMiddleware(BaseHTTPMiddleware):
             )
 
         except Exception as e:
-            logger.exception(f"Unhandled exception: {str(e)}")
+            logger.exception(f"Unhandled exception on {request.url.path}: {str(e)}")
             return JSONResponse(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 content={

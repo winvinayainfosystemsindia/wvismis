@@ -212,8 +212,13 @@ class UserService:
         password: str,
         organization_slug: Optional[str] = None,
     ) -> Optional[User]:
-        """Authenticate user with email, password, and optional organization slug"""
-        user = await self.repository.get_by_email(email.lower().strip())
+        """Authenticate user with email or username, password, and optional organization slug"""
+        clean_id = (email or "").strip()
+        if not clean_id:
+            return None
+        user = await self.repository.get_by_email(clean_id.lower())
+        if not user:
+            user = await self.repository.get_by_username(clean_id)
         if not user:
             return None
 
@@ -240,7 +245,10 @@ class UserService:
             )
 
         # Record last_login_at
-        user.last_login_at = datetime.now(timezone.utc)
+        now = datetime.now(timezone.utc)
+        user.last_login_at = now
+        user.updated_at = now
         await self.db.flush()
+        await self.db.refresh(user, attribute_names=["updated_at", "last_login_at"])
 
         return user

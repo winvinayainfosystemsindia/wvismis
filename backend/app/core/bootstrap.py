@@ -100,4 +100,13 @@ async def init_parent_org_and_superuser(db: AsyncSession) -> tuple[Organization,
             old_admin.role = UserRole.ADMIN
             await db.commit()
 
+    # Ensure every existing user in the database is associated with an organization
+    from sqlalchemy import update
+    await db.execute(
+        update(User)
+        .where(User.organization_id.is_(None))
+        .values(organization_id=parent_org.id)
+    )
+    await db.commit()
+
     return parent_org, superuser

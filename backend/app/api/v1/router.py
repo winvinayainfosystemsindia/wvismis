@@ -10,6 +10,7 @@ from app.api.v1.endpoints import (
     ai,
     ai_settings,
     ai_chat,
+    frontend_compat,
 )
 
 router = APIRouter()
@@ -19,6 +20,7 @@ router.include_router(auth.router)
 router.include_router(organizations.router)
 router.include_router(users.router)
 router.include_router(activity_logs.router)
+router.include_router(frontend_compat.router)
 
 # Real-Time WebSockets & Data Streaming
 router.include_router(websockets.router)

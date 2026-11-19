@@ -129,26 +129,5 @@ class Organization(BaseModel):
         comment="Tenant-specific feature flags and custom configuration",
     )
 
-    # Hierarchical parent-child relationships
-    parent: Mapped[Organization | None] = relationship(
-        "Organization",
-        remote_side="Organization.id",
-        back_populates="sub_organizations",
-        lazy="selectin",
-    )
-
-    sub_organizations: Mapped[list[Organization]] = relationship(
-        "Organization",
-        back_populates="parent",
-        lazy="selectin",
-    )
-
-    # Relationships
-    users: Mapped[list[User]] = relationship(
-        "User",
-        back_populates="organization",
-        lazy="selectin",
-    )
-
     def __repr__(self) -> str:
         return f"<Organization(id={self.id}, slug='{self.slug}', name='{self.name}')>"

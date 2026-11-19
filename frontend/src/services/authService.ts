@@ -1,0 +1,316 @@
+import api from './api';
+import type { LoginResponse, RegisterResponse, User, BillingAddress } from '../models/auth';
+import { jwtDecode } from 'jwt-decode';
+
+// Token storage keys
+const ACCESS_TOKEN_KEY = 'access_token';
+const REFRESH_TOKEN_KEY = 'refresh_token';
+const USER_PREFS_KEY = 'wvismis_user_prefs';
+
+interface JWTPayload {
+	sub: string;
+	exp: number;
+	iat: number;
+	type?: string;
+}
+
+function getStoredUserPrefs(): Record<string, any> {
+	try {
+		const raw = localStorage.getItem(USER_PREFS_KEY);
+		return raw ? JSON.parse(raw) : {};
+	} catch {
+		return {};
+	}
+}
+
+function saveStoredUserPrefs(prefs: Record<string, any>) {
+	try {
+		const current = getStoredUserPrefs();
+		localStorage.setItem(USER_PREFS_KEY, JSON.stringify({ ...current, ...prefs }));
+	} catch {
+		// ignore storage errors
+	}
+}
+
+function normalizeUser(user: User): User {
+	const prefs = getStoredUserPrefs();
+	const org = user.organization
+		? {
+				...user.organization,
+				subscription_status:
+					user.organization.subscription_status ||
+					(user.organization.is_active !== false ? 'active' : 'inactive'),
+				plan_name:
+					user.organization.plan_name ||
+					(user.organization as any).subscription_plan ||
+					'enterprise',
+		  }
+		: null;
+
+	return {
+		...user,
+		organization: org,
+		timezone: user.timezone || prefs.timezone || 'Asia/Kolkata',
+		currency: user.currency || prefs.currency || 'INR',
+		phone: user.phone || (user as any).mobile || prefs.phone || null,
+		job_title: user.job_title || (user as any).designation || prefs.job_title || null,
+		avatar: user.avatar || (user as any).avatar_url || prefs.avatar || null,
+	};
+}
+
+const authService = {
+	/**
+	 * Login user and store tokens
+	 */
+	login: async (identifier: string, password: string): Promise<LoginResponse> => {
+		const trimmed = identifier.trim();
+		const response = await api.post<LoginResponse>('/auth/login', {
+			identifier: trimmed,
+			email: trimmed.includes('@') ? trimmed : undefined,
+			password,
+		});
+
+		if (response.data.access_token && response.data.refresh_token) {
+			localStorage.setItem(ACCESS_TOKEN_KEY, response.data.access_token);
+			localStorage.setItem(REFRESH_TOKEN_KEY, response.data.refresh_token);
+		}
+
+		return response.data;
+	},
+
+	/**
+	 * Register a new user
+	 */
+	register: async (userData: any): Promise<RegisterResponse> => {
+		const response = await api.post<RegisterResponse>('/auth/register', userData);
+		return normalizeUser(response.data);
+	},
+
+	/**
+	 * Self-onboard a new organization and admin user
+	 */
+	onboard: async (onboardData: any): Promise<any> => {
+		try {
+			const response = await api.post('/onboard', onboardData);
+			return response.data;
+		} catch (err: any) {
+			if (err?.response?.status === 404 && onboardData?.admin_user) {
+				const regPayload = {
+					email: onboardData.admin_user.email,
+					username: onboardData.admin_user.username,
+					full_name: onboardData.admin_user.full_name,
+					password: onboardData.admin_user.password,
+					organization_name: onboardData.organization?.name,
+				};
+				const res = await api.post('/auth/register', regPayload);
+				return {
+					success: true,
+					message: 'Account registered successfully!',
+					user: res.data,
+				};
+			}
+			throw err;
+		}
+	},
+
+	/**
+	 * Verify user email address using the 6-digit code sent to their inbox
+	 */
+	verifyEmail: async (email: string, otp: string): Promise<any> => {
+		const response = await api.post('/auth/verify-email', { email, otp });
+		return response.data;
+	},
+
+	/**
+	 * Accept an invite by setting a password.
+	 */
+	acceptInvite: async (token: string, newPassword: string): Promise<LoginResponse> => {
+		const response = await api.post<LoginResponse>('/auth/accept-invite', {
+			token,
+			new_password: newPassword,
+		});
+
+		if (response.data.access_token && response.data.refresh_token) {
+			localStorage.setItem(ACCESS_TOKEN_KEY, response.data.access_token);
+			localStorage.setItem(REFRESH_TOKEN_KEY, response.data.refresh_token);
+		}
+
+		return response.data;
+	},
+
+	/**
+	 * Resend the verification email for a not-yet-verified account
+	 */
+	resendVerification: async (email: string): Promise<any> => {
+		const response = await api.post('/auth/resend-verification', { email });
+		return response.data;
+	},
+
+	/**
+	 * Request a password reset link for a forgotten password
+	 */
+	forgotPassword: async (email: string): Promise<any> => {
+		const response = await api.post('/auth/forgot-password', { email });
+		return response.data;
+	},
+
+	/**
+	 * Reset password using the reset token from the email link
+	 */
+	resetPassword: async (token: string, newPassword: string): Promise<any> => {
+		const response = await api.post('/auth/reset-password', {
+			token,
+			new_password: newPassword,
+		});
+		return response.data;
+	},
+
+	/**
+	 * Refresh access token using refresh token
+	 */
+	refreshToken: async (): Promise<LoginResponse | null> => {
+		const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
+
+		if (!refreshToken) {
+			return null;
+		}
+
+		try {
+			const response = await api.post<LoginResponse>('/auth/refresh', {
+				refresh_token: refreshToken,
+			});
+
+			if (response.data.access_token && response.data.refresh_token) {
+				localStorage.setItem(ACCESS_TOKEN_KEY, response.data.access_token);
+				localStorage.setItem(REFRESH_TOKEN_KEY, response.data.refresh_token);
+			}
+
+			return response.data;
+		} catch {
+			authService.clearTokens();
+			return null;
+		}
+	},
+
+	/**
+	 * Logout user and clear tokens
+	 */
+	logout: async (): Promise<void> => {
+		const refreshToken = authService.getRefreshToken();
+		if (refreshToken) {
+			try {
+				await api.post('/auth/logout', { refresh_token: refreshToken });
+			} catch (error) {
+				console.error('Failed to logout on server:', error);
+			}
+		}
+		authService.clearTokens();
+	},
+
+	/**
+	 * Clear all stored tokens
+	 */
+	clearTokens: () => {
+		localStorage.removeItem(ACCESS_TOKEN_KEY);
+		localStorage.removeItem(REFRESH_TOKEN_KEY);
+	},
+
+	/**
+	 * Get access token from storage
+	 */
+	getAccessToken: (): string | null => {
+		return localStorage.getItem(ACCESS_TOKEN_KEY);
+	},
+
+	/**
+	 * Get refresh token from storage
+	 */
+	getRefreshToken: (): string | null => {
+		return localStorage.getItem(REFRESH_TOKEN_KEY);
+	},
+
+	/**
+	 * Check if a token is expired
+	 */
+	isTokenExpired: (token: string): boolean => {
+		try {
+			const decoded = jwtDecode<JWTPayload>(token);
+			return decoded.exp * 1000 < Date.now() + 60000;
+		} catch {
+			return true;
+		}
+	},
+
+	/**
+	 * Validate current session and refresh if needed
+	 */
+	validateSession: async (): Promise<boolean> => {
+		const accessToken = authService.getAccessToken();
+		const refreshToken = authService.getRefreshToken();
+
+		if (!accessToken && !refreshToken) {
+			return false;
+		}
+
+		if (accessToken && !authService.isTokenExpired(accessToken)) {
+			return true;
+		}
+
+		if (refreshToken && !authService.isTokenExpired(refreshToken)) {
+			const result = await authService.refreshToken();
+			return result !== null;
+		}
+
+		authService.clearTokens();
+		return false;
+	},
+
+	/**
+	 * Get current user info
+	 */
+	getCurrentUser: async (): Promise<User> => {
+		const response = await api.get<User>('/auth/me');
+		return normalizeUser(response.data);
+	},
+
+	/**
+	 * Update the current user's own display preferences and profile extras
+	 */
+	updateProfile: async (payload: {
+		full_name?: string | null;
+		timezone?: string | null;
+		currency?: string | null;
+		dob?: string | null;
+		phone?: string | null;
+		avatar?: string | null;
+		job_title?: string | null;
+		billing_address?: BillingAddress | null;
+		billing_reminder?: boolean | null;
+	}): Promise<User> => {
+		saveStoredUserPrefs(payload);
+		try {
+			const response = await api.put<User>('/users/me', {
+				full_name: payload.full_name,
+				mobile: payload.phone,
+				designation: payload.job_title,
+				avatar_url: payload.avatar,
+			});
+			return normalizeUser(response.data);
+		} catch {
+			const response = await api.patch<User>('/auth/me', payload);
+			return normalizeUser(response.data);
+		}
+	},
+
+	/**
+	 * Extend organization trial period (Super Admin only)
+	 */
+	extendTrial: async (orgPublicId: string, extendDays: number): Promise<any> => {
+		const response = await api.post(`/admin/organizations/${orgPublicId}/extend-trial`, {
+			extend_days: extendDays,
+		});
+		return response.data;
+	},
+};
+
+export default authService;

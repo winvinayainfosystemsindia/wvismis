@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#232f3e" />
+  <title>Gravit | CRM & Project Management Platform for Small Business</title>
+  <meta name="description"
+    content="Gravit unifies CRM, project management, timesheets & billing, and HR & payroll in one AI business operations platform for small and growing service businesses — powered by IRIS, an AI agent that works across all of it." />
+  <meta name="keywords" content="CRM and project management for small business, AI business operations platform, unified business software, CRM software, project management software, timesheets and billing, HR and payroll software, meeting booking software, Gravit, Taydens" />
+  <meta name="author" content="Taydens" />
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://gravit.taydens.com/" />
+  <meta property="og:title" content="Gravit | CRM & Project Management Platform for Small Business" />
+  <meta property="og:description" content="CRM, projects, timesheets & billing, and HR & payroll in one platform — tied together by IRIS, an AI agent that works across all of it." />
+  <!-- TODO(design): /og-image.png does not exist yet. Needs a 1200x630 on-brand
+       social-share image (product name + tagline) before launch, or this tag
+       and its Twitter counterpart below should be removed. -->
+  <meta property="og:image" content="https://gravit.taydens.com/og-image.png" />
+
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary_large_image" />
+  <meta property="twitter:url" content="https://gravit.taydens.com/" />
+  <meta property="twitter:title" content="Gravit | CRM & Project Management Platform for Small Business" />
+  <meta property="twitter:description"
+    content="CRM, projects, timesheets & billing, and HR & payroll in one platform — tied together by IRIS, an AI agent that works across all of it." />
+  <meta property="twitter:image" content="https://gravit.taydens.com/og-image.png" />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #030407;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    #root-loader {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at 50% 50%, #0c0f1d 0%, #030407 100%);
+      z-index: 9999;
+      overflow: hidden;
+    }
+
+    /* Ambient Aurora Glows */
+    .aurora-1 {
+      position: absolute;
+      top: -20%;
+      left: -20%;
+      width: 60vw;
+      height: 60vw;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(139, 124, 246, 0.08) 0%, rgba(0,0,0,0) 70%);
+      filter: blur(80px);
+      animation: drift 20s infinite alternate ease-in-out;
+      pointer-events: none;
+    }
+
+    .aurora-2 {
+      position: absolute;
+      bottom: -20%;
+      right: -20%;
+      width: 50vw;
+      height: 50vw;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(78, 168, 255, 0.06) 0%, rgba(0,0,0,0) 70%);
+      filter: blur(60px);
+      animation: drift 15s infinite alternate-reverse ease-in-out;
+      pointer-events: none;
+    }
+
+    @keyframes drift {
+      0% { transform: translate(0, 0) scale(1); }
+      100% { transform: translate(10%, 10%) scale(1.1); }
+    }
+
+    .loader-content {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+    }
+
+    /* Premium SVG Spinner */
+    .spinner-container {
+      margin-bottom: 24px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .spinner {
+      width: 96px;
+      height: 96px;
+      filter: drop-shadow(0 0 10px rgba(139, 124, 246, 0.35));
+    }
+
+    .loader-text {
+      color: #F4F5F7;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      opacity: 0.85;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+      animation: pulseText 1.5s infinite ease-in-out;
+    }
+
+    .loader-subtext {
+      color: #64748B;
+      font-size: 11px;
+      font-weight: 500;
+      margin-top: 8px;
+      letter-spacing: 0.05em;
+    }
+
+    @keyframes pulseText {
+      0%, 100% { opacity: 0.6; }
+      50% { opacity: 0.95; }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="root">
+    <div id="root-loader">
+      <div class="aurora-1"></div>
+      <div class="aurora-2"></div>
+      <div class="loader-content">
+        <div class="spinner-container">
+          <img class="spinner" src="/assets/img/spinner/gravit-spinner-G2-dual-ring.svg" alt="Loading" />
+        </div>
+        <div class="loader-text">Initializing Gravit</div>
+        <div class="loader-subtext">Establishing secure console connection...</div>
+      </div>
+    </div>
+  </div>
+  <noscript>
+    <div style="padding: 20px; text-align: center; font-family: sans-serif;">
+      <h2>JavaScript Required</h2>
+      <p>Please enable JavaScript to use Gravit.</p>
+    </div>
+  </noscript>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+
+</html>

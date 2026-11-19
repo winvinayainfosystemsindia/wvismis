@@ -189,6 +189,8 @@ async def get_users(
     request: Request,
     skip: int = Query(0, ge=0, description="Number of records to skip"),
     limit: int = Query(20, ge=1, le=2000, description="Maximum number of records to return"),
+    page: Optional[int] = Query(None, ge=1, description="Optional 1-indexed page number"),
+    page_size: Optional[int] = Query(None, ge=1, le=2000, description="Optional page size"),
     role: Optional[UserRole] = Query(None, description="Filter by user role"),
     search: Optional[str] = Query(
         None,
@@ -199,10 +201,13 @@ async def get_users(
     db: AsyncSession = Depends(get_db),
 ):
     """Get list of users scoped to the active Organization with pagination and search."""
+    effective_limit = page_size if page_size is not None else limit
+    effective_skip = ((page - 1) * effective_limit) if page is not None else skip
+
     user_service = UserService(db)
     users = await user_service.get_users(
-        skip=skip,
-        limit=limit,
+        skip=effective_skip,
+        limit=effective_limit,
         organization_id=current_org.id,
         role=role.value if role else None,
         search=search,
@@ -227,9 +232,9 @@ async def get_users(
     return PaginatedResponse(
         items=users,
         total=total,
-        page=(skip // limit) + 1,
-        page_size=limit,
-        total_pages=(total + limit - 1) // limit if total > 0 else 0,
+        page=(effective_skip // effective_limit) + 1,
+        page_size=effective_limit,
+        total_pages=(total + effective_limit - 1) // effective_limit if total > 0 else 0,
     )
 
 
@@ -269,30 +274,114 @@ async def search_users(
     )
 
 
-@router.get("/{user_id}", response_model=UserResponse, summary="Get user by ID")
+async def _resolve_user_by_ref(
+    db: AsyncSession,
+    user_ref: str,
+    organization_id: Optional[int] = None,
+) -> User:
+    """Resolve user by integer ID or UUID public_id"""
+    import uuid as uuid_lib
+    user_service = UserService(db)
+    if user_ref.isdigit():
+        return await user_service.get_user(int(user_ref), organization_id=organization_id)
+    try:
+        parsed_uuid = uuid_lib.UUID(user_ref)
+        user = await user_service.repository.get_by_public_id(parsed_uuid)
+    except ValueError:
+        user = None
+    if not user or (organization_id is not None and user.organization_id != organization_id):
+        from fastapi import HTTPException
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    return user
+
+
+@router.post(
+    "/invite",
+    response_model=UserResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Invite a new teammate into the current Organization",
+)
+@rate_limit_medium()
+async def invite_user(
+    request: Request,
+    payload: dict,
+    current_user: User = Depends(
+        require_roles([UserRole.SUPER_ADMIN, UserRole.ORG_ADMIN, UserRole.ADMIN])
+    ),
+    current_org: Organization = Depends(get_current_organization),
+    db: AsyncSession = Depends(get_db),
+):
+    """Invite a new user into the active Organization."""
+    role_str = payload.get("role", "user")
+    try:
+        role_enum = UserRole(role_str)
+    except ValueError:
+        role_enum = UserRole.USER
+
+    user_in = UserCreate(
+        email=payload["email"],
+        username=payload["username"],
+        full_name=payload.get("full_name"),
+        password=payload.get("password") or "Welcome@123",
+        role=role_enum,
+        is_active=True,
+        is_verified=False,
+    )
+    user_service = UserService(db)
+    user = await user_service.create_user(user_in, forced_organization_id=current_org.id)
+    return user
+
+
+@router.post("/bulk-delete", summary="Bulk soft-delete users by public_ids")
+@rate_limit_medium()
+async def bulk_delete_users(
+    request: Request,
+    payload: dict,
+    current_user: User = Depends(
+        require_roles([UserRole.SUPER_ADMIN, UserRole.ORG_ADMIN, UserRole.ADMIN])
+    ),
+    current_org: Organization = Depends(get_current_organization),
+    db: AsyncSession = Depends(get_db),
+):
+    """Bulk delete users in the active Organization."""
+    public_ids = payload.get("public_ids") or []
+    is_super = current_user.is_superuser or current_user.role == UserRole.SUPER_ADMIN
+    org_filter = None if is_super else current_org.id
+    user_service = UserService(db)
+    deleted_count = 0
+    for pid in public_ids:
+        try:
+            u = await _resolve_user_by_ref(db, str(pid), organization_id=org_filter)
+            if u.id != current_user.id:
+                await user_service.delete_user(u.id, organization_id=org_filter)
+                deleted_count += 1
+        except Exception:
+            continue
+    return {"message": f"Deleted {deleted_count} user(s)", "deleted_count": deleted_count}
+
+
+@router.get("/{user_id}", response_model=UserResponse, summary="Get user by ID or public_id")
 @rate_limit_medium()
 async def get_user(
     request: Request,
-    user_id: int,
+    user_id: str,
     current_user: User = Depends(
         require_roles([UserRole.SUPER_ADMIN, UserRole.ORG_ADMIN, UserRole.ADMIN, UserRole.MANAGER])
     ),
     current_org: Organization = Depends(get_current_organization),
     db: AsyncSession = Depends(get_db),
 ):
-    """Get user by ID within the current Organization."""
+    """Get user by ID or public_id within the current Organization."""
     is_super = current_user.is_superuser or current_user.role == UserRole.SUPER_ADMIN
     org_filter = None if is_super else current_org.id
-
-    user_service = UserService(db)
-    return await user_service.get_user(user_id, organization_id=org_filter)
+    return await _resolve_user_by_ref(db, user_id, organization_id=org_filter)
 
 
-@router.put("/{user_id}", response_model=UserResponse, summary="Update user by ID")
+@router.put("/{user_id}", response_model=UserResponse, summary="Update user by ID or public_id")
 @rate_limit_medium()
 async def update_user(
     request: Request,
-    user_id: int,
+    user_id: str,
     user_in: UserUpdate,
     current_user: User = Depends(
         require_roles([UserRole.SUPER_ADMIN, UserRole.ORG_ADMIN, UserRole.ADMIN])
@@ -300,15 +389,14 @@ async def update_user(
     current_org: Organization = Depends(get_current_organization),
     db: AsyncSession = Depends(get_db),
 ):
-    """Update user by ID within the current Organization."""
+    """Update user by ID or public_id within the current Organization."""
     is_super = current_user.is_superuser or current_user.role == UserRole.SUPER_ADMIN
     org_filter = None if is_super else current_org.id
 
     if not is_super:
         user_in.organization_id = None
 
-    user_service = UserService(db)
-    existing_user = await user_service.get_user(user_id, organization_id=org_filter)
+    existing_user = await _resolve_user_by_ref(db, user_id, organization_id=org_filter)
     before_state = {
         "email": existing_user.email,
         "username": existing_user.username,
@@ -318,8 +406,9 @@ async def update_user(
         "role": existing_user.role.value,
     }
 
+    user_service = UserService(db)
     updated_user = await user_service.update_user(
-        user_id,
+        existing_user.id,
         user_in,
         organization_id=org_filter,
     )
@@ -338,7 +427,7 @@ async def update_user(
         organization_id=updated_user.organization_id,
         user_id=current_user.id,
         resource_type="user",
-        resource_id=user_id,
+        resource_id=existing_user.id,
         before=before_state,
         after=after_state,
     )
@@ -346,27 +435,96 @@ async def update_user(
     return updated_user
 
 
-@router.delete(
-    "/{user_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
-    summary="Delete user by ID (soft delete)",
-)
+@router.post("/{user_id}/deactivate", response_model=UserResponse, summary="Deactivate user")
 @rate_limit_medium()
-async def delete_user(
+async def deactivate_user(
     request: Request,
-    user_id: int,
+    user_id: str,
     current_user: User = Depends(
         require_roles([UserRole.SUPER_ADMIN, UserRole.ORG_ADMIN, UserRole.ADMIN])
     ),
     current_org: Organization = Depends(get_current_organization),
     db: AsyncSession = Depends(get_db),
 ):
-    """Soft-delete user by ID within the current Organization."""
+    is_super = current_user.is_superuser or current_user.role == UserRole.SUPER_ADMIN
+    org_filter = None if is_super else current_org.id
+    target = await _resolve_user_by_ref(db, user_id, organization_id=org_filter)
+    user_service = UserService(db)
+    return await user_service.update_user(target.id, UserUpdate(is_active=False), organization_id=org_filter)
+
+
+@router.post("/{user_id}/reactivate", response_model=UserResponse, summary="Reactivate user")
+@rate_limit_medium()
+async def reactivate_user(
+    request: Request,
+    user_id: str,
+    current_user: User = Depends(
+        require_roles([UserRole.SUPER_ADMIN, UserRole.ORG_ADMIN, UserRole.ADMIN])
+    ),
+    current_org: Organization = Depends(get_current_organization),
+    db: AsyncSession = Depends(get_db),
+):
+    is_super = current_user.is_superuser or current_user.role == UserRole.SUPER_ADMIN
+    org_filter = None if is_super else current_org.id
+    target = await _resolve_user_by_ref(db, user_id, organization_id=org_filter)
+    user_service = UserService(db)
+    return await user_service.update_user(target.id, UserUpdate(is_active=True), organization_id=org_filter)
+
+
+@router.post("/{user_id}/resend-invite", response_model=UserResponse, summary="Resend user invite")
+@rate_limit_medium()
+async def resend_user_invite(
+    request: Request,
+    user_id: str,
+    current_user: User = Depends(
+        require_roles([UserRole.SUPER_ADMIN, UserRole.ORG_ADMIN, UserRole.ADMIN])
+    ),
+    current_org: Organization = Depends(get_current_organization),
+    db: AsyncSession = Depends(get_db),
+):
+    is_super = current_user.is_superuser or current_user.role == UserRole.SUPER_ADMIN
+    org_filter = None if is_super else current_org.id
+    return await _resolve_user_by_ref(db, user_id, organization_id=org_filter)
+
+
+@router.post("/{user_id}/reset-password", response_model=UserResponse, summary="Trigger password reset")
+@rate_limit_medium()
+async def trigger_user_password_reset(
+    request: Request,
+    user_id: str,
+    current_user: User = Depends(
+        require_roles([UserRole.SUPER_ADMIN, UserRole.ORG_ADMIN, UserRole.ADMIN])
+    ),
+    current_org: Organization = Depends(get_current_organization),
+    db: AsyncSession = Depends(get_db),
+):
+    is_super = current_user.is_superuser or current_user.role == UserRole.SUPER_ADMIN
+    org_filter = None if is_super else current_org.id
+    return await _resolve_user_by_ref(db, user_id, organization_id=org_filter)
+
+
+@router.delete(
+    "/{user_id}",
+    response_model=UserResponse,
+    summary="Delete user by ID or public_id (soft delete)",
+)
+@rate_limit_medium()
+async def delete_user(
+    request: Request,
+    user_id: str,
+    current_user: User = Depends(
+        require_roles([UserRole.SUPER_ADMIN, UserRole.ORG_ADMIN, UserRole.ADMIN])
+    ),
+    current_org: Organization = Depends(get_current_organization),
+    db: AsyncSession = Depends(get_db),
+):
+    """Soft-delete user by ID or public_id within the current Organization."""
     is_super = current_user.is_superuser or current_user.role == UserRole.SUPER_ADMIN
     org_filter = None if is_super else current_org.id
 
+    target = await _resolve_user_by_ref(db, user_id, organization_id=org_filter)
     user_service = UserService(db)
-    await user_service.delete_user(user_id, organization_id=org_filter)
+    await user_service.delete_user(target.id, organization_id=org_filter)
 
     await log_delete(
         db=db,
@@ -374,7 +532,7 @@ async def delete_user(
         organization_id=current_org.id,
         user_id=current_user.id,
         resource_type="user",
-        resource_id=user_id,
+        resource_id=target.id,
     )
 
-    return None
+    return target

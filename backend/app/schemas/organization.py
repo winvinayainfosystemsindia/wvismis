@@ -62,9 +62,12 @@ class OrganizationSummary(BaseModel):
     public_id: uuid.UUID
     name: str
     slug: str
-    is_parent: bool = False
-    subscription_plan: SubscriptionPlan
-    is_active: bool
+    is_parent: Optional[bool] = False
+    parent_id: Optional[int] = None
+    subscription_plan: SubscriptionPlan = SubscriptionPlan.ENTERPRISE
+    is_active: bool = True
+    max_users: Optional[int] = 100
+    settings: Optional[Dict[str, Any]] = None
 
     model_config = ConfigDict(from_attributes=True)
 

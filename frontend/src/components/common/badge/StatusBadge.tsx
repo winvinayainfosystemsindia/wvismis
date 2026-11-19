@@ -1,0 +1,116 @@
+import React from 'react';
+import { Box, Typography } from '@mui/material';
+import { useTheme, alpha } from '@mui/material/styles';
+
+export type BadgeType = 'lead' | 'deal' | 'task' | 'company' | 'project' | 'meeting' | 'generic';
+
+interface StatusBadgeProps {
+	label: string;
+	status: string;
+	type?: BadgeType;
+	variant?: 'soft' | 'solid';
+}
+
+type StatusTone = 'success' | 'info' | 'warning' | 'error' | 'default';
+
+export const getStatusTone = (status: string, type: BadgeType): StatusTone => {
+	const s = status.toLowerCase();
+
+	if (type === 'lead') {
+		if (['qualified', 'converted'].includes(s)) return 'success';
+		if (['contacted', 'negotiation', 'proposal_sent'].includes(s)) return 'info';
+		if (['new', 'nurturing'].includes(s)) return 'warning';
+		if (['lost', 'unqualified'].includes(s)) return 'error';
+	}
+
+	if (type === 'deal') {
+		if (['closed_won', 'won'].includes(s)) return 'success';
+		if (['proposal', 'negotiation', 'discovery', 'qualification', 'open'].includes(s)) return 'info';
+		if (['on_hold'].includes(s)) return 'warning';
+		if (['closed_lost', 'lost'].includes(s)) return 'error';
+	}
+
+	if (type === 'task') {
+		if (['completed'].includes(s)) return 'success';
+		if (['in_progress'].includes(s)) return 'info';
+		if (['pending', 'deferred'].includes(s)) return 'warning';
+		if (['cancelled'].includes(s)) return 'error';
+	}
+
+	if (type === 'project') {
+		if (['completed', 'approved', 'invoiced'].includes(s)) return 'success';
+		if (['active', 'in_progress'].includes(s)) return 'info';
+		if (['planning', 'on_hold', 'in_testing'].includes(s)) return 'warning';
+		if (['delayed', 'canceled'].includes(s)) return 'error';
+	}
+
+	if (type === 'meeting') {
+		if (['completed'].includes(s)) return 'success';
+		if (['scheduled'].includes(s)) return 'info';
+		if (['cancelled'].includes(s)) return 'error';
+	}
+
+	// Company & generic
+	if (['active', 'client', 'customer', 'partner', 'pro', 'enterprise'].includes(s)) return 'success';
+	if (['prospect', 'basic'].includes(s)) return 'info';
+	if (['inactive', 'expired'].includes(s)) return 'error';
+	if (['free', 'trial'].includes(s)) return 'warning';
+
+	return 'default';
+};
+
+const StatusBadge: React.FC<StatusBadgeProps> = ({ label, status, type = 'generic', variant = 'soft' }) => {
+	const theme = useTheme();
+	const tone = getStatusTone(status, type);
+
+	const paletteColor = {
+		success: theme.palette.success.main,
+		info:    theme.palette.primary.main,
+		warning: theme.palette.warning.main,
+		error:   theme.palette.error.main,
+		default: theme.palette.text.disabled,
+	}[tone];
+
+	const isSolid = variant === 'solid';
+
+	return (
+		<Box
+			sx={{
+				display: 'inline-flex',
+				alignItems: 'center',
+				gap: 0.75,
+				px: 1.25,
+				py: 0.4,
+				borderRadius: '100px',
+				bgcolor: isSolid ? paletteColor : alpha(paletteColor, 0.1),
+				border: isSolid ? 'none' : `1px solid ${alpha(paletteColor, 0.25)}`,
+			}}
+		>
+			{/* Status dot */}
+			<Box
+				sx={{
+					width: 6,
+					height: 6,
+					borderRadius: '50%',
+					bgcolor: isSolid ? '#ffffff' : paletteColor,
+					flexShrink: 0,
+				}}
+			/>
+			<Typography
+				variant="caption"
+				sx={{
+					fontWeight: 600,
+					textTransform: 'capitalize',
+					fontSize: '0.72rem',
+					letterSpacing: '0.02em',
+					color: isSolid ? '#ffffff' : paletteColor,
+					lineHeight: 1,
+				}}
+			>
+				{label}
+			</Typography>
+		</Box>
+	);
+};
+
+export default StatusBadge;

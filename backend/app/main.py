@@ -6,7 +6,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, status, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, HTMLResponse
-from fastapi.exceptions import RequestValidationError
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError, ResponseValidationError
 from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.openapi.utils import get_openapi
 from sqlalchemy import text
@@ -78,6 +79,15 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 async def validation_exception_handler(request, exc):
     logger.error(f"Validation Error for {request.url}: {exc.errors()}")
     return await request_validation_exception_handler(request, exc)
+
+
+@app.exception_handler(ResponseValidationError)
+async def response_validation_exception_handler(request, exc: ResponseValidationError):
+    logger.error(f"Response Validation Error for {request.url}: {exc.errors()}")
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content=jsonable_encoder({"error": "Response Validation Error", "detail": str(exc)}),
+    )
 
 
 # CORS Middleware

@@ -71,7 +71,7 @@ class UserResponse(UserBase):
     """Schema for user response including tenant context"""
     id: int
     public_id: uuid.UUID
-    organization_id: int = Field(..., description="Organization ID the user is associated with")
+    organization_id: Optional[int] = Field(None, description="Organization ID the user is associated with")
     organization: Optional[OrganizationSummary] = None
     is_superuser: bool
     role: UserRole
@@ -111,8 +111,9 @@ class TokenPayload(BaseModel):
 
 
 class LoginRequest(BaseModel):
-    """Login request schema"""
-    email: EmailStr
+    """Login request schema supporting either email or identifier (email/username)"""
+    email: Optional[str] = Field(None, description="User email address")
+    identifier: Optional[str] = Field(None, description="User email address or username")
     password: str
     organization_slug: Optional[str] = Field(
         None,

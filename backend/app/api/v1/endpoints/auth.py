@@ -93,22 +93,25 @@ async def login(
     Authenticate with email, password, and optional `organization_slug`.
     Returns signed JWT `access_token`, `refresh_token`, expiration metadata, and user profile.
     """
-    logger.info(f"Login attempt for: {login_data.email}")
+    login_identifier = (login_data.identifier or login_data.email or "").strip()
+    logger.info(f"Login attempt for: {login_identifier}")
 
     user_service = UserService(db)
     user = await user_service.authenticate(
-        email=login_data.email,
+        email=login_identifier,
         password=login_data.password,
         organization_slug=login_data.organization_slug,
     )
 
     if not user:
-        logger.warning(f"Failed login attempt for: {login_data.email}")
+        logger.warning(f"Failed login attempt for: {login_identifier}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+    user_response = UserResponse.model_validate(user)
 
     token_claims = {
         "sub": str(user.id),
@@ -141,7 +144,7 @@ async def login(
         token_type="bearer",
         expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         organization_id=user.organization_id,
-        user=UserResponse.model_validate(user),
+        user=user_response,
     )
 
 
@@ -280,6 +283,8 @@ async def refresh_token(
             detail="Inactive user account",
         )
 
+    user_response = UserResponse.model_validate(user)
+
     # Rotate old refresh token by blacklisting its JTI
     if old_jti:
         exp_ts = payload.get("exp")
@@ -320,7 +325,7 @@ async def refresh_token(
         token_type="bearer",
         expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         organization_id=user.organization_id,
-        user=UserResponse.model_validate(user),
+        user=user_response,
     )
 
 

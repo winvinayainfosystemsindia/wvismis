@@ -130,7 +130,6 @@ class User(BaseModel, TenantMixin):
     # Multi-tenant Organization relationship
     organization: Mapped[Organization] = relationship(
         "Organization",
-        back_populates="users",
         lazy="selectin",
     )
 

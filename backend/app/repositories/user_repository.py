@@ -2,6 +2,7 @@
 
 from typing import Optional, List
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.user import User
 from app.repositories.base import BaseRepository
@@ -13,15 +14,34 @@ class UserRepository(BaseRepository[User]):
     def __init__(self, db: AsyncSession):
         super().__init__(User, db)
 
+    async def get(
+        self,
+        id: int,
+        include_deleted: bool = False,
+        organization_id: Optional[int] = None,
+    ) -> Optional[User]:
+        """Get user by ID with eager-loaded organization"""
+        query = select(User).options(selectinload(User.organization)).where(User.id == id)
+        if not include_deleted:
+            query = query.where(User.is_deleted == False)
+        if organization_id is not None:
+            query = query.where(User.organization_id == organization_id)
+        result = await self.db.execute(query)
+        return result.scalar_one_or_none()
+
     async def get_by_email(
         self,
         email: str,
         organization_id: Optional[int] = None,
     ) -> Optional[User]:
         """Get user by email, optionally scoped to an organization"""
-        query = select(User).where(
-            User.email == email.lower().strip(),
-            User.is_deleted == False,
+        query = (
+            select(User)
+            .options(selectinload(User.organization))
+            .where(
+                User.email == email.lower().strip(),
+                User.is_deleted == False,
+            )
         )
         if organization_id is not None:
             query = query.where(User.organization_id == organization_id)
@@ -34,9 +54,13 @@ class UserRepository(BaseRepository[User]):
         organization_id: Optional[int] = None,
     ) -> Optional[User]:
         """Get user by username, optionally scoped to an organization"""
-        query = select(User).where(
-            User.username == username.strip(),
-            User.is_deleted == False,
+        query = (
+            select(User)
+            .options(selectinload(User.organization))
+            .where(
+                User.username == username.strip(),
+                User.is_deleted == False,
+            )
         )
         if organization_id is not None:
             query = query.where(User.organization_id == organization_id)

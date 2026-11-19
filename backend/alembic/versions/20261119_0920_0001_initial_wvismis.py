@@ -23,8 +23,6 @@ def upgrade() -> None:
         "organizations",
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
         sa.Column("public_id", sa.Uuid(), nullable=False),
-        sa.Column("parent_id", sa.Integer(), nullable=True),
-        sa.Column("is_parent", sa.Boolean(), nullable=False, server_default=sa.text("false")),
         sa.Column("name", sa.String(length=255), nullable=False),
         sa.Column("slug", sa.String(length=100), nullable=False),
         sa.Column("domain", sa.String(length=255), nullable=True),
@@ -45,13 +43,10 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
         sa.Column("is_deleted", sa.Boolean(), nullable=False, server_default=sa.text("false")),
         sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
-        sa.ForeignKeyConstraint(["parent_id"], ["organizations.id"], ondelete="SET NULL"),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(op.f("ix_organizations_id"), "organizations", ["id"], unique=False)
     op.create_index(op.f("ix_organizations_public_id"), "organizations", ["public_id"], unique=True)
-    op.create_index(op.f("ix_organizations_parent_id"), "organizations", ["parent_id"], unique=False)
-    op.create_index(op.f("ix_organizations_is_parent"), "organizations", ["is_parent"], unique=False)
     op.create_index(op.f("ix_organizations_name"), "organizations", ["name"], unique=False)
     op.create_index(op.f("ix_organizations_slug"), "organizations", ["slug"], unique=True)
     op.create_index(op.f("ix_organizations_domain"), "organizations", ["domain"], unique=True)
@@ -64,7 +59,7 @@ def upgrade() -> None:
         "users",
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
         sa.Column("public_id", sa.Uuid(), nullable=False),
-        sa.Column("organization_id", sa.Integer(), nullable=False),
+        sa.Column("organization_id", sa.Integer(), nullable=True),
         sa.Column("email", sa.String(length=255), nullable=False),
         sa.Column("username", sa.String(length=100), nullable=False),
         sa.Column("full_name", sa.String(length=255), nullable=True),

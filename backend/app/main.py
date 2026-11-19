@@ -40,7 +40,14 @@ async def lifespan(app: FastAPI):
         async with AsyncSessionLocal() as session:
             await init_parent_org_and_superuser(session)
     except Exception as exc:
-        logger.warning(f"Could not run bootstrap database initialization on startup: {exc}")
+        err_msg = str(exc)
+        if "UndefinedColumnError" in err_msg or "does not exist" in err_msg:
+            logger.warning(
+                "Database schema has pending migrations (missing columns). "
+                "Please run: 'alembic upgrade head' in the backend directory."
+            )
+        else:
+            logger.warning(f"Could not run bootstrap database initialization on startup: {exc}")
 
     yield
     logger.info("Shutting down application...")

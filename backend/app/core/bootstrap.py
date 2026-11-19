@@ -91,4 +91,13 @@ async def init_parent_org_and_superuser(db: AsyncSession) -> tuple[Organization,
             await db.refresh(superuser)
             logger.info(f"Superuser '{superuser_email}' updated with parent org association")
 
+    # Clean up previous placeholder admin if it existed
+    if superuser_email != "admin@winvinaya.com":
+        old_admin_res = await db.execute(select(User).where(User.email == "admin@winvinaya.com"))
+        old_admin = old_admin_res.scalar_one_or_none()
+        if old_admin and old_admin.is_superuser:
+            old_admin.is_superuser = False
+            old_admin.role = UserRole.ADMIN
+            await db.commit()
+
     return parent_org, superuser

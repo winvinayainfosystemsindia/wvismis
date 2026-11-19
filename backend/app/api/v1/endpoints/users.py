@@ -1,0 +1,380 @@
+"""User endpoints — Multi-tenant scoped user administration and self-service profile endpoints"""
+
+from typing import List, Optional
+from fastapi import APIRouter, Depends, status, Query, Request
+from sqlalchemy import select, func, and_
+from sqlalchemy.ext.asyncio import AsyncSession
+from loguru import logger
+
+from app.core.database import get_db
+from app.core.rate_limiter import rate_limit_medium
+from app.api.deps import get_current_user, get_current_organization, require_roles
+from app.models.user import User, UserRole
+from app.models.organization import Organization
+from app.schemas.user import UserResponse, UserUpdate, UserCreate, PaginatedResponse
+from app.services.user_service import UserService
+from app.utils.activity_tracker import log_update, log_delete, log_create
+
+
+router = APIRouter(prefix="/users", tags=["Users"])
+
+
+@router.get("/me", response_model=UserResponse, summary="Get current user information")
+@rate_limit_medium()
+async def get_current_user_info(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+):
+    """Get current authenticated user information including Organization context."""
+    return current_user
+
+
+@router.get("/roles", response_model=List[str], summary="Get all available user roles")
+async def get_roles(
+    current_user: User = Depends(get_current_user),
+):
+    """Return list of all user roles in WVISMIS."""
+    return [role.value for role in UserRole]
+
+
+@router.put("/me", response_model=UserResponse, summary="Update current user profile")
+@rate_limit_medium()
+async def update_current_user(
+    request: Request,
+    user_in: UserUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update current user's own profile information."""
+    logger.info(f"User self-update request: {current_user.email}")
+
+    # Prevent non-admin users from escalating their own role or changing organization
+    if not current_user.is_superuser and current_user.role not in (
+        UserRole.SUPER_ADMIN,
+        UserRole.ORG_ADMIN,
+        UserRole.ADMIN,
+    ):
+        user_in.role = None
+        user_in.organization_id = None
+        user_in.is_active = None
+        user_in.is_verified = None
+
+    before_state = {
+        "email": current_user.email,
+        "username": current_user.username,
+        "full_name": current_user.full_name,
+        "is_active": current_user.is_active,
+        "role": current_user.role.value,
+        "department": current_user.department,
+        "designation": current_user.designation,
+    }
+
+    user_service = UserService(db)
+    updated_user = await user_service.update_user(current_user.id, user_in)
+
+    after_state = {
+        "email": updated_user.email,
+        "username": updated_user.username,
+        "full_name": updated_user.full_name,
+        "is_active": updated_user.is_active,
+        "role": updated_user.role.value,
+        "department": updated_user.department,
+        "designation": updated_user.designation,
+    }
+    await log_update(
+        db=db,
+        request=request,
+        organization_id=current_user.organization_id,
+        user_id=current_user.id,
+        resource_type="user",
+        resource_id=current_user.id,
+        before=before_state,
+        after=after_state,
+    )
+
+    return updated_user
+
+
+@router.get("/stats", summary="Get user statistics for the current Organization")
+@rate_limit_medium()
+async def get_user_stats(
+    request: Request,
+    current_user: User = Depends(
+        require_roles([UserRole.SUPER_ADMIN, UserRole.ORG_ADMIN, UserRole.ADMIN, UserRole.MANAGER])
+    ),
+    current_org: Organization = Depends(get_current_organization),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get user statistics scoped to the active Organization."""
+    user_service = UserService(db)
+    total = await user_service.repository.count(organization_id=current_org.id)
+
+    active_query = select(func.count(User.id)).where(
+        User.organization_id == current_org.id,
+        User.is_deleted == False,
+        User.is_active == True,
+    )
+    active_result = await db.execute(active_query)
+    active = active_result.scalar() or 0
+
+    role_query = (
+        select(User.role, func.count(User.id))
+        .where(
+            User.organization_id == current_org.id,
+            User.is_deleted == False,
+        )
+        .group_by(User.role)
+    )
+    role_result = await db.execute(role_query)
+    role_counts = {role.value: count for role, count in role_result.all()}
+
+    return {
+        "organization_id": current_org.id,
+        "organization_name": current_org.name,
+        "total": total,
+        "by_role": role_counts,
+        "active": active,
+        "inactive": total - active,
+        "roles_count": len(role_counts),
+    }
+
+
+@router.post(
+    "/",
+    response_model=UserResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a new user in the current Organization (Admin / Org Admin)",
+)
+@rate_limit_medium()
+async def create_user(
+    request: Request,
+    user_in: UserCreate,
+    current_user: User = Depends(
+        require_roles([UserRole.SUPER_ADMIN, UserRole.ORG_ADMIN, UserRole.ADMIN])
+    ),
+    current_org: Organization = Depends(get_current_organization),
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a new user inside the active Organization."""
+    logger.info(
+        f"Creating new user: {user_in.email} in org {current_org.slug} by {current_user.email}"
+    )
+
+    is_super = current_user.is_superuser or current_user.role == UserRole.SUPER_ADMIN
+    target_org_id = user_in.organization_id if (is_super and user_in.organization_id) else current_org.id
+
+    user_service = UserService(db)
+    user = await user_service.create_user(user_in, forced_organization_id=target_org_id)
+
+    await log_create(
+        db=db,
+        request=request,
+        organization_id=user.organization_id,
+        user_id=current_user.id,
+        resource_type="user",
+        resource_id=user.id,
+        created_object=user,
+    )
+
+    return user
+
+
+@router.get(
+    "/",
+    response_model=PaginatedResponse,
+    summary="Get paginated list of users in the current Organization",
+)
+@rate_limit_medium()
+async def get_users(
+    request: Request,
+    skip: int = Query(0, ge=0, description="Number of records to skip"),
+    limit: int = Query(20, ge=1, le=2000, description="Maximum number of records to return"),
+    role: Optional[UserRole] = Query(None, description="Filter by user role"),
+    search: Optional[str] = Query(
+        None,
+        description="Search users by name, email, username, phone, or department",
+    ),
+    current_user: User = Depends(get_current_user),
+    current_org: Organization = Depends(get_current_organization),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get list of users scoped to the active Organization with pagination and search."""
+    user_service = UserService(db)
+    users = await user_service.get_users(
+        skip=skip,
+        limit=limit,
+        organization_id=current_org.id,
+        role=role.value if role else None,
+        search=search,
+    )
+
+    filters = [User.organization_id == current_org.id]
+    if role:
+        filters.append(User.role == role)
+    if search:
+        search_filter = (
+            User.full_name.ilike(f"%{search}%")
+            | User.email.ilike(f"%{search}%")
+            | User.username.ilike(f"%{search}%")
+            | User.mobile.ilike(f"%{search}%")
+            | User.department.ilike(f"%{search}%")
+        )
+        filters.append(search_filter)
+
+    filter_expr = and_(*filters)
+    total = await user_service.repository.count(filter_expr=filter_expr)
+
+    return PaginatedResponse(
+        items=users,
+        total=total,
+        page=(skip // limit) + 1,
+        page_size=limit,
+        total_pages=(total + limit - 1) // limit if total > 0 else 0,
+    )
+
+
+@router.get("/search", response_model=PaginatedResponse, summary="Search users in Organization")
+@rate_limit_medium()
+async def search_users(
+    request: Request,
+    q: str = Query(..., description="Search query string"),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
+    current_user: User = Depends(get_current_user),
+    current_org: Organization = Depends(get_current_organization),
+    db: AsyncSession = Depends(get_db),
+):
+    """Search users by name, email, or username within the active Organization."""
+    user_service = UserService(db)
+    users = await user_service.get_users(
+        skip=skip,
+        limit=limit,
+        organization_id=current_org.id,
+        search=q,
+    )
+    total = await user_service.repository.count(
+        organization_id=current_org.id,
+        filter_expr=(
+            User.full_name.ilike(f"%{q}%")
+            | User.email.ilike(f"%{q}%")
+            | User.username.ilike(f"%{q}%")
+        ),
+    )
+    return PaginatedResponse(
+        items=users,
+        total=total,
+        page=(skip // limit) + 1,
+        page_size=limit,
+        total_pages=(total + limit - 1) // limit if total > 0 else 0,
+    )
+
+
+@router.get("/{user_id}", response_model=UserResponse, summary="Get user by ID")
+@rate_limit_medium()
+async def get_user(
+    request: Request,
+    user_id: int,
+    current_user: User = Depends(
+        require_roles([UserRole.SUPER_ADMIN, UserRole.ORG_ADMIN, UserRole.ADMIN, UserRole.MANAGER])
+    ),
+    current_org: Organization = Depends(get_current_organization),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get user by ID within the current Organization."""
+    is_super = current_user.is_superuser or current_user.role == UserRole.SUPER_ADMIN
+    org_filter = None if is_super else current_org.id
+
+    user_service = UserService(db)
+    return await user_service.get_user(user_id, organization_id=org_filter)
+
+
+@router.put("/{user_id}", response_model=UserResponse, summary="Update user by ID")
+@rate_limit_medium()
+async def update_user(
+    request: Request,
+    user_id: int,
+    user_in: UserUpdate,
+    current_user: User = Depends(
+        require_roles([UserRole.SUPER_ADMIN, UserRole.ORG_ADMIN, UserRole.ADMIN])
+    ),
+    current_org: Organization = Depends(get_current_organization),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update user by ID within the current Organization."""
+    is_super = current_user.is_superuser or current_user.role == UserRole.SUPER_ADMIN
+    org_filter = None if is_super else current_org.id
+
+    if not is_super:
+        user_in.organization_id = None
+
+    user_service = UserService(db)
+    existing_user = await user_service.get_user(user_id, organization_id=org_filter)
+    before_state = {
+        "email": existing_user.email,
+        "username": existing_user.username,
+        "full_name": existing_user.full_name,
+        "is_active": existing_user.is_active,
+        "is_verified": existing_user.is_verified,
+        "role": existing_user.role.value,
+    }
+
+    updated_user = await user_service.update_user(
+        user_id,
+        user_in,
+        organization_id=org_filter,
+    )
+
+    after_state = {
+        "email": updated_user.email,
+        "username": updated_user.username,
+        "full_name": updated_user.full_name,
+        "is_active": updated_user.is_active,
+        "is_verified": updated_user.is_verified,
+        "role": updated_user.role.value,
+    }
+    await log_update(
+        db=db,
+        request=request,
+        organization_id=updated_user.organization_id,
+        user_id=current_user.id,
+        resource_type="user",
+        resource_id=user_id,
+        before=before_state,
+        after=after_state,
+    )
+
+    return updated_user
+
+
+@router.delete(
+    "/{user_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete user by ID (soft delete)",
+)
+@rate_limit_medium()
+async def delete_user(
+    request: Request,
+    user_id: int,
+    current_user: User = Depends(
+        require_roles([UserRole.SUPER_ADMIN, UserRole.ORG_ADMIN, UserRole.ADMIN])
+    ),
+    current_org: Organization = Depends(get_current_organization),
+    db: AsyncSession = Depends(get_db),
+):
+    """Soft-delete user by ID within the current Organization."""
+    is_super = current_user.is_superuser or current_user.role == UserRole.SUPER_ADMIN
+    org_filter = None if is_super else current_org.id
+
+    user_service = UserService(db)
+    await user_service.delete_user(user_id, organization_id=org_filter)
+
+    await log_delete(
+        db=db,
+        request=request,
+        organization_id=current_org.id,
+        user_id=current_user.id,
+        resource_type="user",
+        resource_id=user_id,
+    )
+
+    return None

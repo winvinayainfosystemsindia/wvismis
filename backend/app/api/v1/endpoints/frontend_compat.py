@@ -454,12 +454,17 @@ async def admin_get_platform_stats(
     current_user: User = Depends(get_current_superuser),
     db: AsyncSession = Depends(get_db),
 ):
+    from app.core.cache import memory_cache
+    cached_stats = await memory_cache.get("admin:platform_stats")
+    if cached_stats is not None:
+        return cached_stats
+
     total_orgs = (await db.execute(select(func.count(Organization.id)).where(Organization.is_deleted == False))).scalar() or 0
     inactive_orgs = (await db.execute(select(func.count(Organization.id)).where(Organization.is_deleted == False, Organization.is_active == False))).scalar() or 0
     total_users = (await db.execute(select(func.count(User.id)).where(User.is_deleted == False))).scalar() or 0
     avg_users = round(total_users / total_orgs, 1) if total_orgs > 0 else 0.0
 
-    return {
+    stats = {
         "total_organizations": total_orgs,
         "active_trials": 0,
         "total_users": total_users,
@@ -471,6 +476,8 @@ async def admin_get_platform_stats(
         "team_organizations": total_orgs,
         "individual_organizations": 0,
     }
+    await memory_cache.set("admin:platform_stats", stats, ttl_seconds=30.0)
+    return stats
 
 
 @router.get("/admin/system-health", tags=["Super Admin Console"])

@@ -5,12 +5,17 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.cache import memory_cache
+from app.core.websocket import ws_manager
 from app.api.deps import get_current_superuser
 from app.models.user import User
 from app.repositories.plan_repository import PlanRepository
 from app.schemas.plan import PlanResponse, PlanUpdate
 
 router = APIRouter(prefix="/plans", tags=["Pricing & Subscription Plans"])
+
+CACHE_PLANS_KEY = "plans:all"
+CACHE_PLANS_TTL = 600.0  # 10 minutes
 
 
 @router.get(
@@ -20,9 +25,16 @@ router = APIRouter(prefix="/plans", tags=["Pricing & Subscription Plans"])
     description="Returns every seeded pricing tier with the modules it unlocks, AI monthly quota, and price.",
 )
 async def list_plans(db: AsyncSession = Depends(get_db)) -> List[PlanResponse]:
-    """Public endpoint — no auth required, used to render pricing and billing options."""
+    """Public endpoint — no auth required, cached for fast billing & pricing page rendering."""
+    cached_plans = await memory_cache.get(CACHE_PLANS_KEY)
+    if cached_plans is not None:
+        return [PlanResponse.model_validate(p) for p in cached_plans]
+
     plans = await PlanRepository.list_all(db)
-    return [PlanResponse.model_validate(plan) for plan in plans]
+    result = [PlanResponse.model_validate(plan) for plan in plans]
+    # Cache serializable dicts
+    await memory_cache.set(CACHE_PLANS_KEY, [r.model_dump() for r in result], ttl_seconds=CACHE_PLANS_TTL)
+    return result
 
 
 @router.get(
@@ -34,13 +46,20 @@ async def get_plan_by_tier(
     tier: str,
     db: AsyncSession = Depends(get_db),
 ) -> PlanResponse:
+    tier_key = f"plans:tier:{tier.lower()}"
+    cached_plan = await memory_cache.get(tier_key)
+    if cached_plan is not None:
+        return PlanResponse.model_validate(cached_plan)
+
     plan = await PlanRepository.get_by_tier(db, tier)
     if not plan:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Pricing plan with tier '{tier}' not found.",
         )
-    return PlanResponse.model_validate(plan)
+    result = PlanResponse.model_validate(plan)
+    await memory_cache.set(tier_key, result.model_dump(), ttl_seconds=CACHE_PLANS_TTL)
+    return result
 
 
 @router.put(
@@ -66,4 +85,12 @@ async def update_plan(
 
     await db.commit()
     await db.refresh(plan)
-    return PlanResponse.model_validate(plan)
+
+    # Invalidate cache and broadcast real-time update
+    await memory_cache.invalidate_prefix("plans:")
+    result = PlanResponse.model_validate(plan)
+    await ws_manager.broadcast_system(
+        event_type="plan_updated",
+        data=result.model_dump(),
+    )
+    return result

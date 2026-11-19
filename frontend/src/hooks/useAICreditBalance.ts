@@ -1,20 +1,30 @@
-import { useEffect, useState } from 'react';
-import { useAppSelector } from '../store/hooks';
-import aiService, { type AICreditBalance } from '../services/aiService';
+import { useEffect } from 'react';
+import { useAppDispatch, useAppSelector } from '../store/hooks';
+import { fetchCreditBalance } from '../store/slices/aiSlice';
+import type { AICreditBalance } from '../services/aiService';
 
-/** Shared by Navbar (desktop) and Sidebar (mobile) so both surfaces show the same balance
- * without duplicating the fetch/shape logic -- each still makes its own lightweight GET,
- * which is fine for a balance this cheap to read. */
+/**
+ * Shared hook accessing the central Redux AI credit state.
+ * Prevents redundant GET requests by caching balance across Navbar, Sidebar, and pages.
+ * Instantly synchronized in real-time via WebSockets.
+ */
 export const useAICreditBalance = (): AICreditBalance | null => {
+	const dispatch = useAppDispatch();
 	const hasOrg = useAppSelector((state) => !!state.auth.user?.organization);
-	const [credits, setCredits] = useState<AICreditBalance | null>(null);
+	const balance = useAppSelector((state) => state.ai.creditBalance);
+	const lastFetched = useAppSelector((state) => state.ai.lastFetched);
 
 	useEffect(() => {
 		if (!hasOrg) return;
-		aiService.getCreditBalance().then(setCredits).catch(() => setCredits(null));
-	}, [hasOrg]);
 
-	return credits;
+		// Only fetch if no balance in memory or cache is older than 25 seconds
+		const isStale = !lastFetched || Date.now() - lastFetched > 25000;
+		if (!balance || isStale) {
+			dispatch(fetchCreditBalance(false));
+		}
+	}, [hasOrg, balance, lastFetched, dispatch]);
+
+	return balance;
 };
 
 export default useAICreditBalance;

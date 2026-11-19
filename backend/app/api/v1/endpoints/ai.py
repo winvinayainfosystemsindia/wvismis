@@ -1,4 +1,4 @@
-"""AI Endpoints — Credit balance, top-up purchase, usage metrics, and admin credit grants"""
+"""AI Endpoints — Credit balance, top-up purchase, usage metrics, and admin credit grants with in-memory caching and real-time WebSockets"""
 
 import uuid
 from datetime import datetime, timezone
@@ -7,6 +7,8 @@ from fastapi import APIRouter, Depends, Query, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.cache import memory_cache
+from app.core.websocket import ws_manager
 from app.api.deps import get_current_user, get_current_superuser
 from app.models.user import User
 from app.models.organization import Organization
@@ -20,6 +22,9 @@ from app.services import ai_credit_service
 from app.repositories.user_repository import UserRepository
 
 router = APIRouter(prefix="/ai", tags=["AI Credits & Usage"])
+
+CREDIT_CACHE_TTL = 30.0  # 30 seconds TTL for fast repeated page loads
+USAGE_CACHE_TTL = 30.0
 
 
 async def _get_current_org(current_user: User, db: AsyncSession) -> Organization:
@@ -46,17 +51,24 @@ async def get_credit_balance(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> AICreditBalanceResponse:
+    cache_key = f"credits:{current_user.id}"
+    cached_data = await memory_cache.get(cache_key)
+    if cached_data is not None:
+        return AICreditBalanceResponse.model_validate(cached_data)
+
     org = await _get_current_org(current_user, db)
     wallet = await ai_credit_service.get_wallet_status(db, org, current_user.id)
     await db.commit()
-    return AICreditBalanceResponse.from_wallet(wallet)
+    res = AICreditBalanceResponse.from_wallet(wallet)
+    await memory_cache.set(cache_key, res.model_dump(), ttl_seconds=CREDIT_CACHE_TTL)
+    return res
 
 
 @router.post(
     "/credits/purchase",
     response_model=AICreditBalanceResponse,
     summary="Buy additional AI credits for my own wallet",
-    description="Self-service top-up: adds credits directly to the caller's wallet.",
+    description="Self-service top-up: adds credits directly to the caller's wallet and broadcasts real-time balance update.",
 )
 async def purchase_credits(
     payload: AICreditPurchaseRequest,
@@ -68,7 +80,21 @@ async def purchase_credits(
         db, org, current_user.id, payload.amount
     )
     await db.commit()
-    return AICreditBalanceResponse.from_wallet(wallet)
+    res = AICreditBalanceResponse.from_wallet(wallet)
+
+    # Invalidate cached credit & usage
+    await memory_cache.delete(f"credits:{current_user.id}")
+    await memory_cache.invalidate_prefix(f"usage:{org.id}")
+
+    # Broadcast real-time WebSocket event to all connections of this user
+    await ws_manager.send_to_user(
+        user_id=current_user.id,
+        event_type="credits_updated",
+        data=res.model_dump(),
+        channel="general",
+    )
+
+    return res
 
 
 @router.get(
@@ -83,7 +109,15 @@ async def get_token_utilization(
 ) -> TokenUtilizationSummary:
     org = await _get_current_org(current_user, db)
     target_user_id = current_user.id if scope == "mine" else None
-    return await ai_credit_service.get_token_utilization_summary(db, org, user_id=target_user_id)
+    cache_key = f"usage:{org.id}:{scope}:{target_user_id or 'all'}"
+
+    cached_data = await memory_cache.get(cache_key)
+    if cached_data is not None:
+        return TokenUtilizationSummary.model_validate(cached_data)
+
+    res = await ai_credit_service.get_token_utilization_summary(db, org, user_id=target_user_id)
+    await memory_cache.set(cache_key, res.model_dump(), ttl_seconds=USAGE_CACHE_TTL)
+    return res
 
 
 @router.post(
@@ -118,7 +152,21 @@ async def grant_user_credits(
         )
 
     wallet = await ai_credit_service.grant_admin_credits_to_user(
-        db, org, target_user.id, payload.amount
+        db, org, target_user.id, payload.amount, reason=payload.reason
     )
     await db.commit()
-    return AICreditBalanceResponse.from_wallet(wallet)
+    res = AICreditBalanceResponse.from_wallet(wallet)
+
+    # Invalidate cache
+    await memory_cache.delete(f"credits:{target_user.id}")
+    await memory_cache.invalidate_prefix(f"usage:{org.id}")
+
+    # Real-time WebSocket event to target user
+    await ws_manager.send_to_user(
+        user_id=target_user.id,
+        event_type="credits_updated",
+        data=res.model_dump(),
+        channel="general",
+    )
+
+    return res

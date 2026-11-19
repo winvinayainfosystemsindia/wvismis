@@ -654,6 +654,26 @@ async def update_organization_plan_endpoint(
     await db.commit()
     await db.refresh(current_org)
 
+    # Invalidate cache and broadcast to organization members
+    from app.core.cache import memory_cache
+    from app.core.websocket import ws_manager
+
+    await memory_cache.invalidate_prefix("plans:")
+    await memory_cache.invalidate_prefix(f"credits:")
+    await memory_cache.invalidate_prefix(f"usage:{current_org.id}")
+
+    await ws_manager.broadcast_to_organization(
+        organization_id=current_org.id,
+        event_type="plan_updated",
+        data={
+            "organization_id": current_org.id,
+            "plan_id": current_org.plan_id,
+            "plan_name": plan.name,
+            "plan_tier": plan.tier.value,
+            "subscription_status": current_org.subscription_status,
+        },
+    )
+
     return {
         "success": True,
         "message": f"Organization plan updated to {plan.name}.",

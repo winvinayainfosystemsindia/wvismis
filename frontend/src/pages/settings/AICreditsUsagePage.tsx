@@ -37,8 +37,9 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { useNavigate } from 'react-router-dom';
 import PageHeader from '../../components/common/page-header';
 import useToast from '../../hooks/useToast';
-import { useAppSelector } from '../../store/hooks';
-import aiService, { type AICreditBalance, type AIUsageSummary } from '../../services/aiService';
+import { useAppDispatch, useAppSelector } from '../../store/hooks';
+import { fetchCreditBalance, fetchUsageSummary, setCreditBalance } from '../../store/slices/aiSlice';
+import aiService from '../../services/aiService';
 
 const prettifyActionType = (actionType: string): string =>
 	actionType
@@ -178,12 +179,14 @@ const AICreditsUsagePage: React.FC = () => {
 	const isDark = theme.palette.mode === 'dark';
 	const brand = theme.palette.primary.main;
 	const toast = useToast();
+	const dispatch = useAppDispatch();
 	const user = useAppSelector((state) => state.auth.user);
 	const planName = user?.organization?.plan?.name || (user?.organization as any)?.subscription_plan || 'Enterprise';
 
-	const [balance, setBalance] = useState<AICreditBalance | null>(null);
-	const [usage, setUsage] = useState<AIUsageSummary | null>(null);
-	const [loading, setLoading] = useState(true);
+	const balance = useAppSelector((state) => state.ai.creditBalance);
+	const usage = useAppSelector((state) => state.ai.usageSummary);
+	const lastFetched = useAppSelector((state) => state.ai.lastFetched);
+	const [loading, setLoading] = useState(!balance);
 
 	// Checkout / Buy-credits dialog state
 	const [selectedPackage, setSelectedPackage] = useState<CreditPackage | null>(null);
@@ -195,14 +198,16 @@ const AICreditsUsagePage: React.FC = () => {
 	const [cardName, setCardName] = useState('');
 
 	useEffect(() => {
-		Promise.all([aiService.getCreditBalance(), aiService.getUsageSummary('mine')])
-			.then(([b, u]) => {
-				setBalance(b);
-				setUsage(u);
-			})
-			.catch(() => {})
-			.finally(() => setLoading(false));
-	}, []);
+		const isStale = !lastFetched || Date.now() - lastFetched > 25000;
+		if (!balance || isStale) {
+			Promise.all([
+				dispatch(fetchCreditBalance(false)),
+				dispatch(fetchUsageSummary('mine')),
+			]).finally(() => setLoading(false));
+		} else {
+			setLoading(false);
+		}
+	}, [dispatch, balance, lastFetched]);
 
 	const handleBuyClick = (pkg: CreditPackage) => {
 		setSelectedPackage(pkg);
@@ -225,7 +230,7 @@ const AICreditsUsagePage: React.FC = () => {
 		setTimeout(async () => {
 			try {
 				const updated = await aiService.purchaseCredits(selectedPackage.credits);
-				setBalance(updated);
+				dispatch(setCreditBalance(updated));
 				toast.success(`Payment confirmed! ${selectedPackage.credits.toLocaleString()} credits added to your wallet.`);
 				setPaymentDialogOpen(false);
 			} catch (error: any) {
@@ -751,14 +756,15 @@ const AICreditsUsagePage: React.FC = () => {
 											top: -13,
 											left: '50%',
 											transform: 'translateX(-50%)',
-											background: theme.gradients?.brand || brand,
+											bgcolor: theme.palette.primary.main,
 											color: '#ffffff',
 											fontWeight: 800,
 											fontSize: '0.68rem',
 											letterSpacing: '0.06em',
-											px: 1,
+											px: 1.5,
 											height: 24,
 											boxShadow: `0 4px 12px ${alpha(brand, 0.4)}`,
+											zIndex: 5,
 										}}
 									/>
 								)}

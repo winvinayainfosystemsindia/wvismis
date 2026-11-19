@@ -9,6 +9,7 @@ import ProfileSetupDialog from './ProfileSetupDialog';
 import ChatDrawer from './chat/ChatDrawer';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { setChatDrawerOpen } from '../../store/slices/uiSlice';
+import wsService from '../../services/websocketService';
 
 const MainLayout: React.FC = () => {
 	const location = useLocation();
@@ -48,6 +49,16 @@ const MainLayout: React.FC = () => {
 			document.documentElement.style.height = originalHtmlHeight;
 		};
 	}, []);
+
+	// Maintain persistent authenticated WebSocket connection for live multi-tenant & quota events
+	useEffect(() => {
+		if (user) {
+			wsService.connect();
+		}
+		return () => {
+			wsService.disconnect();
+		};
+	}, [user]);
 
 	// Settings pages: keep Navbar and Sidebar (Sidebar dynamically loads settings menus)
 	if (isSettingsRoute) {

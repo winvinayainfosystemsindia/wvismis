@@ -47,7 +47,7 @@ app = FastAPI(
         "and Harness Agentic AI."
     ),
     docs_url="/docs",
-    redoc_url=None,
+    redoc_url="/redoc",
     openapi_url="/openapi.json",
     lifespan=lifespan,
 )
@@ -170,28 +170,6 @@ async def root():
         "health": "/health",
         "websocket_stream": f"{settings.API_V1_PREFIX}/ws/stream",
     }
-
-
-@app.get("/redoc", include_in_schema=False)
-async def redoc_html():
-    """Custom ReDoc documentation view"""
-    html_content = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>{settings.APP_NAME} - ReDoc</title>
-        <meta charset="utf-8"/>
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <link href="https://fonts.googleapis.com/css?family=Montserrat:300,400,700|Roboto:300,400,700" rel="stylesheet">
-        <style>body {{ margin: 0; padding: 0; }}</style>
-    </head>
-    <body>
-        <redoc spec-url="/openapi.json"></redoc>
-        <script src="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js"></script>
-    </body>
-    </html>
-    """
-    return HTMLResponse(content=html_content)
 
 
 def custom_openapi():

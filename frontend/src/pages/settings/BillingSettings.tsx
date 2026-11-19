@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
 	Box,
-	Container,
 	Grid,
 	Card,
 	CardContent,
@@ -379,12 +378,11 @@ const BillingSettings: React.FC = () => {
 	};
 
 	return (
-		<Box component="main" sx={{ bgcolor: 'background.default', minHeight: '100vh', py: { xs: 2, sm: 4 } }}>
-			<Container maxWidth="xl">
-				<PageHeader
-					title="Billing & Plan"
-					subtitle="Manage your organization plan, billing tier, and team capacity"
-				/>
+		<Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 3 }}>
+			<PageHeader
+				title="Billing & Plan"
+				subtitle="Manage your organization plan, billing tier, and team capacity"
+			/>
 
 				{/* Organization Seat Utilization Summary */}
 				<Card sx={{ mb: 4, borderRadius: 3, boxShadow: 'none', border: '1px solid', borderColor: 'divider' }}>
@@ -803,7 +801,6 @@ const BillingSettings: React.FC = () => {
 					onClose={() => setConvertDialogOpen(false)}
 					defaultName={organization?.name}
 				/>
-			</Container>
 		</Box>
 	);
 };

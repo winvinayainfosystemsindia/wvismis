@@ -18,6 +18,8 @@ class OrganizationBase(BaseModel):
     contact_email: Optional[EmailStr] = None
     contact_phone: Optional[str] = Field(None, max_length=30)
     address: Optional[str] = None
+    parent_id: Optional[int] = Field(None, description="Parent organization ID for hierarchical organizations")
+    is_parent: bool = Field(False, description="True if this is the root / parent organization (WinVinaya Infosystems)")
     subscription_plan: SubscriptionPlan = SubscriptionPlan.ENTERPRISE
     is_active: bool = True
     max_users: int = Field(100, ge=1, le=100000)
@@ -46,6 +48,8 @@ class OrganizationUpdate(BaseModel):
     contact_email: Optional[EmailStr] = None
     contact_phone: Optional[str] = Field(None, max_length=30)
     address: Optional[str] = None
+    parent_id: Optional[int] = None
+    is_parent: Optional[bool] = None
     subscription_plan: Optional[SubscriptionPlan] = None
     is_active: Optional[bool] = None
     max_users: Optional[int] = Field(None, ge=1, le=100000)
@@ -58,6 +62,7 @@ class OrganizationSummary(BaseModel):
     public_id: uuid.UUID
     name: str
     slug: str
+    is_parent: bool = False
     subscription_plan: SubscriptionPlan
     is_active: bool
 

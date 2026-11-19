@@ -5,7 +5,7 @@ from __future__ import annotations
 import enum
 import uuid
 from typing import TYPE_CHECKING
-from sqlalchemy import String, Boolean, Enum, Integer, JSON, Text, Uuid
+from sqlalchemy import String, Boolean, Enum, Integer, JSON, Text, Uuid, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import BaseModel
 
@@ -24,7 +24,8 @@ class SubscriptionPlan(str, enum.Enum):
 class Organization(BaseModel):
     """
     Organization (Tenant) database model.
-    Maintains multi-tenant isolation, quotas, branding, and tenant settings.
+    Maintains multi-tenant isolation, hierarchy, quotas, branding, and tenant settings.
+    Parent organization: WinVinaya Infosystems
     """
 
     __tablename__ = "organizations"
@@ -35,6 +36,22 @@ class Organization(BaseModel):
         index=True,
         nullable=False,
         default=uuid.uuid4,
+    )
+
+    parent_id: Mapped[int | None] = mapped_column(
+        Integer,
+        ForeignKey("organizations.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+        comment="Parent organization ID for hierarchical multi-tenancy",
+    )
+
+    is_parent: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        nullable=False,
+        index=True,
+        comment="True if this is the root / parent organization (WinVinaya Infosystems)",
     )
 
     name: Mapped[str] = mapped_column(
@@ -110,6 +127,20 @@ class Organization(BaseModel):
         default=dict,
         nullable=True,
         comment="Tenant-specific feature flags and custom configuration",
+    )
+
+    # Hierarchical parent-child relationships
+    parent: Mapped[Organization | None] = relationship(
+        "Organization",
+        remote_side="Organization.id",
+        back_populates="sub_organizations",
+        lazy="selectin",
+    )
+
+    sub_organizations: Mapped[list[Organization]] = relationship(
+        "Organization",
+        back_populates="parent",
+        lazy="selectin",
     )
 
     # Relationships

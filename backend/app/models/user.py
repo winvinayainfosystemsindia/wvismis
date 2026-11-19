@@ -118,8 +118,17 @@ class User(BaseModel, TenantMixin):
         nullable=True,
     )
 
+    # Every user MUST be associated with an organization (parent or tenant org)
+    organization_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("organizations.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+        comment="Associated organization ID (cannot be null; defaults to parent org)",
+    )
+
     # Multi-tenant Organization relationship
-    organization: Mapped[Organization | None] = relationship(
+    organization: Mapped[Organization] = relationship(
         "Organization",
         back_populates="users",
         lazy="selectin",

@@ -61,8 +61,8 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
 
     # Default Bootstrap Admin & Organization
-    FIRST_SUPERUSER: str = "admin@winvinaya.com"
-    FIRST_SUPERUSER_PASSWORD: str = "ChangeMe123!"
+    FIRST_SUPERUSER: str = "dharanidaran.a@winvinaya.com"
+    FIRST_SUPERUSER_PASSWORD: str = "Testpass@123"
     DEFAULT_ORGANIZATION_NAME: str = "WinVinaya Infosystems"
     DEFAULT_ORGANIZATION_SLUG: str = "winvinaya"
 

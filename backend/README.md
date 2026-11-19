@@ -134,11 +134,18 @@ The backend supports environment-specific `.env` files via `ENV_FILE` or `APP_EN
 - `GET /api/v1/auth/me` — Retrieve authenticated user profile and active Organization summary.
 
 ### 2. Multi-Tenancy / Organizations (`/api/v1/organizations`)
+- **Strict Association**: Every user in WVISMIS **must be associated with an organization** (`organization_id` is non-nullable). Self-registered users or new accounts without an explicitly specified organization automatically default to the root parent organization.
+- **Root Parent Organization**: **WinVinaya Infosystems** (`slug: winvinaya`, `is_parent=True`) serves as the default parent organization across all environments.
+- **Root Super Administrator**:
+  - **Email**: `dharanidaran.a@winvinaya.com`
+  - **Password**: `Testpass@123`
+  - Automatically bootstrapped on startup under WinVinaya Infosystems.
 - Every tenant-scoped model inherits `TenantMixin` (`organization_id`).
-- `GET /api/v1/organizations/current` — Inspect active tenant profile and settings.
+- `GET /api/v1/organizations/parent` — Retrieve the root parent organization (WinVinaya Infosystems).
+- `GET /api/v1/organizations/current` — Inspect active tenant profile, hierarchy (`parent_id`, `is_parent`), and settings.
 - `PUT /api/v1/organizations/current` — Update tenant branding, contact info, and settings.
 - `GET /api/v1/organizations/current/stats` — View seat quota (`max_users`), active users, and role distribution.
-- `POST /api/v1/organizations/` & `GET /api/v1/organizations/` — Superuser tenant provisioning and management.
+- `POST /api/v1/organizations/` & `GET /api/v1/organizations/` — Superuser tenant provisioning and hierarchical sub-organization creation (`parent_id`).
 - Superusers can switch tenant context on any endpoint using `X-Organization-ID` or `X-Organization-Slug` headers.
 
 ### 3. Users Management (`/api/v1/users`)

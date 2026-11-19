@@ -32,6 +32,16 @@ async def lifespan(app: FastAPI):
     logger.info(
         f"Starting {settings.APP_NAME} v{settings.APP_VERSION} - Environment: {settings.ENVIRONMENT}"
     )
+
+    # Initialize Parent Org and Superuser on startup
+    try:
+        from app.core.database import AsyncSessionLocal
+        from app.core.bootstrap import init_parent_org_and_superuser
+        async with AsyncSessionLocal() as session:
+            await init_parent_org_and_superuser(session)
+    except Exception as exc:
+        logger.warning(f"Could not run bootstrap database initialization on startup: {exc}")
+
     yield
     logger.info("Shutting down application...")
     await close_db()

@@ -27,7 +27,7 @@ class UserCreate(UserBase):
     password: str = Field(..., min_length=8, max_length=100)
     organization_id: Optional[int] = Field(
         None,
-        description="Existing Organization ID to join",
+        description="Existing Organization ID to join (defaults to parent org WinVinaya Infosystems)",
     )
     organization_slug: Optional[str] = Field(
         None,
@@ -71,7 +71,7 @@ class UserResponse(UserBase):
     """Schema for user response including tenant context"""
     id: int
     public_id: uuid.UUID
-    organization_id: Optional[int] = None
+    organization_id: int = Field(..., description="Organization ID the user is associated with")
     organization: Optional[OrganizationSummary] = None
     is_superuser: bool
     role: UserRole

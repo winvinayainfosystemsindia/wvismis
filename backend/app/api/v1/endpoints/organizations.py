@@ -221,6 +221,23 @@ async def list_organizations(
 
 
 @router.get(
+    "/parent",
+    response_model=OrganizationResponse,
+    summary="Get root / parent organization (WinVinaya Infosystems)",
+)
+@rate_limit_medium()
+async def get_parent_organization(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Retrieve the root parent organization (WinVinaya Infosystems) for the MIS platform."""
+    org_service = OrganizationService(db)
+    parent_org = await org_service.get_or_create_default_organization()
+    return parent_org
+
+
+@router.get(
     "/{org_id}",
     response_model=OrganizationResponse,
     summary="Get Organization by ID",

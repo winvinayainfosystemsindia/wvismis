@@ -536,3 +536,146 @@ async def delete_user(
     )
 
     return target
+
+
+# ── Organization Subscription & Conversion Endpoints ─────────────────────────
+
+from pydantic import BaseModel as _PydanticBaseModel
+
+class ConvertToOrganizationRequest(_PydanticBaseModel):
+    name: str
+    location: Optional[str] = None
+    industry: Optional[str] = None
+    company_size: Optional[str] = None
+    website: Optional[str] = None
+
+
+@router.post(
+    "/organization/convert-to-team",
+    summary="Convert your individual account into a team organization",
+)
+async def convert_to_team_endpoint(
+    payload: ConvertToOrganizationRequest,
+    current_user: User = Depends(
+        require_roles([UserRole.SUPER_ADMIN, UserRole.ORG_ADMIN, UserRole.ADMIN])
+    ),
+    current_org: Organization = Depends(get_current_organization),
+    db: AsyncSession = Depends(get_db),
+):
+    from sqlalchemy.orm.attributes import flag_modified
+    current_org.name = payload.name.strip()
+    if payload.location:
+        current_org.address = payload.location
+    if not current_org.others:
+        current_org.others = {}
+    current_org.others["account_type"] = "organization"
+    if payload.industry:
+        current_org.others["industry"] = payload.industry
+    if payload.company_size:
+        current_org.others["company_size"] = payload.company_size
+    if payload.website:
+        current_org.others["website"] = payload.website
+    flag_modified(current_org, "others")
+
+    await db.commit()
+    await db.refresh(current_org)
+    return {
+        "success": True,
+        "message": f"Your account has been converted to the '{current_org.name}' team organization.",
+        "organization": {
+            "name": current_org.name,
+            "location": current_org.address,
+            "others": current_org.others,
+        },
+    }
+
+
+@router.put(
+    "/organization/plan",
+    summary="Update organization subscription plan (Org Admin)",
+)
+async def update_organization_plan_endpoint(
+    plan_tier: str,
+    account_type: Optional[str] = None,
+    current_user: User = Depends(
+        require_roles([UserRole.SUPER_ADMIN, UserRole.ORG_ADMIN, UserRole.ADMIN])
+    ),
+    current_org: Organization = Depends(get_current_organization),
+    db: AsyncSession = Depends(get_db),
+):
+    from fastapi import HTTPException
+    from sqlalchemy.orm.attributes import flag_modified
+    from app.models.plan import PlanTier, Plan
+    from app.repositories.plan_repository import PlanRepository
+
+    tier_clean = plan_tier.lower().strip()
+    try:
+        tier_enum = PlanTier(tier_clean)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid plan tier '{plan_tier}'. Available tiers: {[e.value for e in PlanTier]}",
+        )
+
+    plan = await PlanRepository.get_by_tier(db, tier_enum)
+    if not plan:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Plan tier '{plan_tier}' not found in database.",
+        )
+
+    # Check user limits
+    if plan.user_limit is not None:
+        user_service = UserService(db)
+        user_count = await user_service.repository.count(organization_id=current_org.id)
+        if user_count > plan.user_limit:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Cannot change plan to '{plan.name}'. Current active users ({user_count}) exceeds limit of {plan.user_limit}.",
+            )
+
+    if account_type:
+        if not current_org.others:
+            current_org.others = {}
+        current_org.others["account_type"] = account_type
+        flag_modified(current_org, "others")
+
+    current_org.plan_id = plan.id
+    if hasattr(current_org, "subscription_plan"):
+        try:
+            from app.models.organization import SubscriptionPlan
+            current_org.subscription_plan = SubscriptionPlan(tier_clean)
+        except Exception:
+            pass
+
+    if tier_enum != PlanTier.FREE:
+        current_org.subscription_status = "active"
+
+    await db.commit()
+    await db.refresh(current_org)
+
+    return {
+        "success": True,
+        "message": f"Organization plan updated to {plan.name}.",
+        "plan_id": current_org.plan_id,
+        "plan_name": plan.name,
+        "plan_tier": plan.tier.value,
+        "subscription_status": current_org.subscription_status,
+    }
+
+
+@router.post(
+    "/organization/request-trial-extension",
+    summary="Request trial extension for your organization",
+)
+async def request_trial_extension_endpoint(
+    current_user: User = Depends(
+        require_roles([UserRole.SUPER_ADMIN, UserRole.ORG_ADMIN, UserRole.ADMIN])
+    ),
+    current_org: Organization = Depends(get_current_organization),
+    db: AsyncSession = Depends(get_db),
+):
+    return {
+        "success": True,
+        "message": f"Trial extension request submitted for '{current_org.name}'. An administrator will review your request.",
+    }

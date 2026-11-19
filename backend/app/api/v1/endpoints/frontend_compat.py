@@ -22,25 +22,57 @@ router = APIRouter()
 def _serialize_org_for_console(org: Organization, user_count: int = 0) -> dict:
     """Serialize Organization into the shape expected by the Super-Admin OrgConsole and Auth User"""
     settings_dict = org.settings or {}
-    account_type = settings_dict.get("account_type", "organization")
+    others_dict = getattr(org, "others", None) or settings_dict
+    account_type = others_dict.get("account_type", settings_dict.get("account_type", "organization"))
     plan_str = org.subscription_plan.value if hasattr(org.subscription_plan, "value") else str(org.subscription_plan)
+
+    plan_obj = None
+    if getattr(org, "plan", None):
+        plan_obj = {
+            "id": org.plan.id,
+            "tier": org.plan.tier.value,
+            "name": org.plan.name,
+            "enabled_modules": org.plan.enabled_modules,
+            "ai_credits_monthly": org.plan.ai_credits_monthly,
+            "user_limit": org.plan.user_limit,
+            "price_per_user": getattr(org.plan, "price_per_user", 0),
+        }
+    else:
+        plan_obj = {
+            "tier": plan_str.lower(),
+            "name": plan_str.capitalize(),
+            "enabled_modules": ["project_management"],
+            "ai_credits_monthly": 1000,
+            "user_limit": org.max_users,
+            "price_per_user": 0,
+        }
+
+    plan_name = org.plan.name if getattr(org, "plan", None) else plan_str.capitalize()
+    user_limit = (org.plan.user_limit if getattr(org, "plan", None) and org.plan.user_limit else org.max_users)
+    sub_status = getattr(org, "subscription_status", None) or settings_dict.get("subscription_status", "active")
+    trial_exp = org.trial_expires_at.isoformat() if getattr(org, "trial_expires_at", None) else None
+
     return {
         "id": org.id,
         "public_id": str(org.public_id),
         "name": org.name,
         "slug": org.slug,
-        "location": org.address or settings_dict.get("location") or "Chennai, India",
+        "location": org.address or others_dict.get("location") or settings_dict.get("location") or "Chennai, India",
         "is_active": org.is_active,
         "is_parent": org.is_parent,
         "parent_id": org.parent_id,
-        "subscription_status": settings_dict.get("subscription_status", "active"),
+        "subscription_status": sub_status,
         "subscription_plan": plan_str,
-        "plan_name": plan_str.capitalize(),
+        "plan_id": getattr(org, "plan_id", None),
+        "plan": plan_obj,
+        "plan_name": plan_name,
+        "trial_expires_at": trial_exp,
         "user_count": user_count,
-        "user_limit": org.max_users,
-        "max_users": org.max_users,
+        "user_limit": user_limit,
+        "max_users": user_limit,
         "account_type": account_type,
-        "others": settings_dict,
+        "others": others_dict,
+        "settings": settings_dict,
         "created_at": org.created_at.isoformat() if org.created_at else None,
         "updated_at": org.updated_at.isoformat() if org.updated_at else None,
     }
@@ -310,8 +342,72 @@ async def admin_extend_organization_trial(
     current_user: User = Depends(get_current_superuser),
     db: AsyncSession = Depends(get_db),
 ):
+    from datetime import datetime, timezone, timedelta
+    days = payload.get("days", 30)
     org = await _resolve_org_by_ref(db, org_ref)
+    base_date = org.trial_expires_at if org.trial_expires_at and org.trial_expires_at > datetime.now(timezone.utc) else datetime.now(timezone.utc)
+    org.trial_expires_at = base_date + timedelta(days=days)
+    org.subscription_status = "trial"
+    await db.flush()
+    await db.refresh(org)
     return _serialize_org_for_console(org)
+
+
+@router.post("/admin/organizations/{org_ref}/plan", tags=["Super Admin Console"])
+async def admin_update_organization_plan(
+    org_ref: str,
+    payload: dict,
+    current_user: User = Depends(get_current_superuser),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.repositories.plan_repository import PlanRepository
+    org = await _resolve_org_by_ref(db, org_ref)
+    tier = payload.get("plan_tier") or payload.get("tier")
+    if not tier:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="plan_tier is required")
+    plan = await PlanRepository.get_by_tier(db, tier)
+    if not plan:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Plan '{tier}' not found")
+    org.plan_id = plan.id
+    if hasattr(org, "subscription_plan"):
+        try:
+            from app.models.organization import SubscriptionPlan
+            org.subscription_plan = SubscriptionPlan(plan.tier.value)
+        except Exception:
+            pass
+    org.subscription_status = payload.get("subscription_status", "active")
+    if "user_limit" in payload and payload["user_limit"]:
+        org.max_users = int(payload["user_limit"])
+    await db.flush()
+    await db.refresh(org)
+    return _serialize_org_for_console(org)
+
+
+@router.post("/admin/users/{public_id}/credits/grant", tags=["Super Admin Console"])
+async def admin_grant_user_credits(
+    public_id: uuid.UUID,
+    payload: dict,
+    current_user: User = Depends(get_current_superuser),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.services import ai_credit_service
+    from app.repositories.user_repository import UserRepository
+    from app.schemas.ai_credit import AICreditBalanceResponse
+
+    amount = int(payload.get("amount", 100))
+    user_repo = UserRepository(db)
+    target_user = await user_repo.get_by_public_id(public_id)
+    if not target_user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    org = await db.get(Organization, target_user.organization_id)
+    if not org:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found")
+
+    wallet = await ai_credit_service.grant_admin_credits_to_user(
+        db, org, target_user.id, amount
+    )
+    await db.commit()
+    return AICreditBalanceResponse.from_wallet(wallet)
 
 
 @router.delete("/admin/organizations/{org_ref}", tags=["Super Admin Console"])
@@ -438,34 +534,4 @@ async def mark_notification_read(
         "message": "",
         "is_read": True,
         "created_at": datetime.now(timezone.utc).isoformat(),
-    }
-
-
-@router.get("/ai/credits", tags=["Harness Agentic AI"])
-async def get_ai_credit_balance(
-    current_user: User = Depends(get_current_user),
-):
-    now = datetime.now(timezone.utc)
-    period_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    return {
-        "balance": 5000,
-        "granted": 5000,
-        "period_start": period_start.isoformat(),
-        "percent_used": 0,
-    }
-
-
-@router.get("/ai/usage", tags=["Harness Agentic AI"])
-async def get_ai_usage_summary(
-    scope: str = Query("mine"),
-    current_user: User = Depends(get_current_user),
-):
-    return {
-        "total_tokens_used": 0,
-        "total_credits_consumed": 0,
-        "total_calls": 0,
-        "by_provider": [],
-        "by_model": [],
-        "by_action_type": [],
-        "daily_trend": [],
     }

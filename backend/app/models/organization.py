@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import enum
 import uuid
-from typing import TYPE_CHECKING
-from sqlalchemy import String, Boolean, Enum, Integer, JSON, Text, Uuid, ForeignKey
+from datetime import datetime
+from typing import TYPE_CHECKING, Optional
+from sqlalchemy import String, Boolean, Enum, Integer, JSON, Text, Uuid, ForeignKey, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import BaseModel
+from app.models.plan import Plan
 
 if TYPE_CHECKING:
     from app.models.user import User
@@ -106,6 +108,39 @@ class Organization(BaseModel):
         default=SubscriptionPlan.ENTERPRISE,
         nullable=False,
         index=True,
+    )
+
+    plan_id: Mapped[int | None] = mapped_column(
+        Integer,
+        ForeignKey("plans.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+        comment="Associated pricing plan tier",
+    )
+
+    plan: Mapped[Optional[Plan]] = relationship(
+        "Plan",
+        lazy="selectin",
+    )
+
+    subscription_status: Mapped[str] = mapped_column(
+        String(50),
+        default="active",
+        nullable=False,
+        index=True,
+        comment="active, trial, expired, cancelled",
+    )
+
+    trial_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    others: Mapped[dict | None] = mapped_column(
+        JSON,
+        default=dict,
+        nullable=True,
+        comment="Extended tenant attributes (account_type, industry, etc.)",
     )
 
     is_active: Mapped[bool] = mapped_column(

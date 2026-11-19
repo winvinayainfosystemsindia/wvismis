@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, EmailStr, Field, field_validator, ConfigDict
 from app.models.organization import SubscriptionPlan
+from app.schemas.plan import PlanResponse
 
 
 class OrganizationBase(BaseModel):
@@ -65,9 +66,16 @@ class OrganizationSummary(BaseModel):
     is_parent: Optional[bool] = False
     parent_id: Optional[int] = None
     subscription_plan: SubscriptionPlan = SubscriptionPlan.ENTERPRISE
+    plan_id: Optional[int] = None
+    plan: Optional[PlanResponse] = None
+    subscription_status: Optional[str] = "active"
+    trial_expires_at: Optional[datetime] = None
     is_active: bool = True
+    user_count: Optional[int] = 1
+    user_limit: Optional[int] = 100
     max_users: Optional[int] = 100
     settings: Optional[Dict[str, Any]] = None
+    others: Optional[Dict[str, Any]] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -76,6 +84,13 @@ class OrganizationResponse(OrganizationBase):
     """Full organization response schema"""
     id: int
     public_id: uuid.UUID
+    plan_id: Optional[int] = None
+    plan: Optional[PlanResponse] = None
+    subscription_status: Optional[str] = "active"
+    trial_expires_at: Optional[datetime] = None
+    user_count: Optional[int] = 1
+    user_limit: Optional[int] = 100
+    others: Optional[Dict[str, Any]] = None
     created_at: datetime
     updated_at: datetime
 

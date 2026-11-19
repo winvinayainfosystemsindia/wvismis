@@ -34,10 +34,31 @@ async def lifespan(app: FastAPI):
         f"Starting {settings.APP_NAME} v{settings.APP_VERSION} - Environment: {settings.ENVIRONMENT}"
     )
 
-    # Initialize Parent Org and Superuser on startup
+    # Initialize Database Tables, Plans, Parent Org and Superuser on startup
     try:
-        from app.core.database import AsyncSessionLocal
+        from app.core.database import engine, Base, AsyncSessionLocal
         from app.core.bootstrap import init_parent_org_and_superuser
+
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+            await conn.execute(text("""
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='organizations' AND column_name='plan_id') THEN
+                        ALTER TABLE organizations ADD COLUMN plan_id INTEGER REFERENCES plans(id) ON DELETE SET NULL;
+                    END IF;
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='organizations' AND column_name='subscription_status') THEN
+                        ALTER TABLE organizations ADD COLUMN subscription_status VARCHAR(50) DEFAULT 'active';
+                    END IF;
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='organizations' AND column_name='trial_expires_at') THEN
+                        ALTER TABLE organizations ADD COLUMN trial_expires_at TIMESTAMP WITH TIME ZONE;
+                    END IF;
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='organizations' AND column_name='others') THEN
+                        ALTER TABLE organizations ADD COLUMN others JSONB DEFAULT '{}'::jsonb;
+                    END IF;
+                END $$;
+            """))
+
         async with AsyncSessionLocal() as session:
             await init_parent_org_and_superuser(session)
     except Exception as exc:

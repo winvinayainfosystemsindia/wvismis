@@ -2,6 +2,8 @@
 
 from app.models.base import BaseModel, TimestampMixin, SoftDeleteMixin, TenantMixin
 from app.models.organization import Organization, SubscriptionPlan
+from app.models.plan import Plan, PlanTier, Module
+from app.models.ai_credit import AICreditWallet, AICreditTransaction, AICreditTransactionReason
 from app.models.user import User, UserRole
 from app.models.token_blacklist import TokenBlacklist
 from app.models.activity_log import ActivityLog, ActionType
@@ -16,6 +18,12 @@ __all__ = [
     "TenantMixin",
     "Organization",
     "SubscriptionPlan",
+    "Plan",
+    "PlanTier",
+    "Module",
+    "AICreditWallet",
+    "AICreditTransaction",
+    "AICreditTransactionReason",
     "User",
     "UserRole",
     "TokenBlacklist",

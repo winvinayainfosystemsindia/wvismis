@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Box, Container, Grid, Stack } from '@mui/material';
+import { Box, Container, Grid, Stack, Button } from '@mui/material';
 import {
 	HelpOutline as HelpIcon,
 	AutoAwesome,
@@ -8,6 +8,8 @@ import {
 	AccountTreeOutlined,
 	ShieldOutlined,
 	LightbulbOutlined,
+	AssessmentOutlined,
+	WarningAmberRounded,
 } from '@mui/icons-material';
 import { responsiveStyles } from '../../theme';
 import PageHeader from '../../components/common/page-header';
@@ -15,6 +17,8 @@ import { HelpGuideButton } from '../../components/common/button';
 import { ConfirmationDialog } from '../../components/common/dialogbox';
 import { WelcomeBanner } from '../../components/common/guide/WelcomeBanner';
 import { HelpGuideDrawer } from '../../components/common/guide/HelpGuideDrawer';
+import { IrisContextPanel } from '../../components/common/iris/IrisContextPanel';
+import type { IrisQuickAction } from '../../components/common/iris/IrisChatBody';
 import {
 	ProjectsTable,
 	ProjectCreateDrawer,
@@ -24,6 +28,12 @@ import {
 	ProjectsBulkActionBar,
 	useProjectsManagement,
 } from '../../components/projects';
+
+const PROJECT_QUICK_ACTIONS: IrisQuickAction[] = [
+	{ label: 'Audit active projects', icon: <AssessmentOutlined sx={{ fontSize: 15 }} />, message: 'Run a health, bottleneck, and risk audit across all active projects.' },
+	{ label: 'Show overdue tasks', icon: <WarningAmberRounded sx={{ fontSize: 15 }} />, message: 'List all overdue tasks across our projects with assignees and due dates.' },
+	{ label: 'List delivery projects', icon: <AccountTreeOutlined sx={{ fontSize: 15 }} />, message: 'Show all active delivery projects, completion progress, and logged hours.' },
+];
 
 const guideContent = {
 	icon: HelpIcon,
@@ -177,6 +187,7 @@ const ProjectsListPage: React.FC = () => {
 	} = useProjectsManagement();
 
 	const [guideOpen, setGuideOpen] = useState(false);
+	const [irisOpen, setIrisOpen] = useState(false);
 	const [showBanner, setShowBanner] = useState(() => {
 		return !localStorage.getItem('dismissed_projects_onboarding');
 	});
@@ -188,7 +199,18 @@ const ProjectsListPage: React.FC = () => {
 					title="Projects"
 					subtitle="Delivery projects converted from Won deals"
 					action={
-						<HelpGuideButton onClick={() => setGuideOpen(true)} sx={{ borderRadius: '8px' }} />
+						<Stack direction="row" spacing={1.5} alignItems="center">
+							<Button
+								size="small"
+								variant="outlined"
+								startIcon={<AutoAwesome fontSize="small" />}
+								onClick={() => setIrisOpen(true)}
+								sx={{ borderRadius: '10px', fontWeight: 700, textTransform: 'none' }}
+							>
+								Ask IRIS
+							</Button>
+							<HelpGuideButton onClick={() => setGuideOpen(true)} sx={{ borderRadius: '8px' }} />
+						</Stack>
 					}
 				/>
 
@@ -280,6 +302,17 @@ const ProjectsListPage: React.FC = () => {
 					open={guideOpen}
 					onClose={() => setGuideOpen(false)}
 					content={guideContent}
+				/>
+
+				{/* Agentic Projects AI Panel */}
+				<IrisContextPanel
+					open={irisOpen}
+					onClose={() => setIrisOpen(false)}
+					subtitle="Projects Agentic AI"
+					contextModule="projects"
+					quickActions={PROJECT_QUICK_ACTIONS}
+					emptySubtitle="Ask me to search projects, inspect task bottlenecks, create tasks, or analyze delivery health."
+					onActionCompleted={refreshData}
 				/>
 			</Container>
 		</Box>

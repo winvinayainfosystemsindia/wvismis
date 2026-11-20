@@ -182,6 +182,24 @@ class TimesheetService:
             approved_user_ids.append(user_id)
             total_approved_count += count
 
+            # Background email notification to approved employee
+            try:
+                import asyncio
+                from app.services.email_notification_service import EmailNotificationService
+                asyncio.create_task(
+                    EmailNotificationService.send_timesheet_approval_notification(
+                        employee=target_user,
+                        approver=current_user,
+                        week_start=start_date,
+                        week_end=end_date,
+                        decision="approved",
+                        total_hours=0.0,
+                        entries_count=count,
+                    )
+                )
+            except Exception as email_err:
+                logger.warning("Could not dispatch approval email notification for user %s: %s", user_id, email_err)
+
         return {
             "approved_user_ids": approved_user_ids,
             "skipped_user_ids": skipped_user_ids,
@@ -602,6 +620,29 @@ class TimesheetService:
             raise BadRequestError(f"No draft or rejected time entries found to submit for {log_date.isoformat()}")
 
         await db.commit()
+
+        # Background email notification to reporting manager
+        try:
+            import asyncio
+            from app.repositories.user import UserRepository
+            from app.services.email_notification_service import EmailNotificationService
+            if current_user.reporting_manager_id:
+                manager = await UserRepository.get_by_id(db, current_user.reporting_manager_id)
+                if manager:
+                    day_logs = list(await ProjectTimeLogRepository.list_for_user(
+                        db, current_user.organization_id, current_user.id, log_date, log_date
+                    ))
+                    asyncio.create_task(
+                        EmailNotificationService.send_daily_timesheet_submission_notification(
+                            manager=manager,
+                            employee=current_user,
+                            log_date=log_date,
+                            logs=day_logs,
+                        )
+                    )
+        except Exception as email_err:
+            logger.warning("Could not dispatch daily timesheet email notification: %s", email_err)
+
         return rowcount
 
     @staticmethod
@@ -636,6 +677,30 @@ class TimesheetService:
             await TimesheetWeekUnlockRequestRepository.consume(db, grant)
 
         await db.commit()
+
+        # Background email notification to reporting manager
+        try:
+            import asyncio
+            from app.repositories.user import UserRepository
+            from app.services.email_notification_service import EmailNotificationService
+            if current_user.reporting_manager_id:
+                manager = await UserRepository.get_by_id(db, current_user.reporting_manager_id)
+                if manager:
+                    week_logs = list(await ProjectTimeLogRepository.list_for_user(
+                        db, current_user.organization_id, current_user.id, start_date, end_date
+                    ))
+                    asyncio.create_task(
+                        EmailNotificationService.send_weekly_timesheet_submission_notification(
+                            manager=manager,
+                            employee=current_user,
+                            week_start=start_date,
+                            week_end=end_date,
+                            logs=week_logs,
+                        )
+                    )
+        except Exception as email_err:
+            logger.warning("Could not dispatch daily timesheet email notification: %s", email_err)
+
         return rowcount
 
     @staticmethod
@@ -699,4 +764,26 @@ class TimesheetService:
             reason=reason.strip() if reason else None,
         )
         await db.commit()
+
+        # Background email notification to reporting manager
+        try:
+            import asyncio
+            from app.repositories.user import UserRepository
+            from app.services.email_notification_service import EmailNotificationService
+            if current_user.reporting_manager_id:
+                manager = await UserRepository.get_by_id(db, current_user.reporting_manager_id)
+                if manager:
+                    asyncio.create_task(
+                        EmailNotificationService.send_timesheet_unlock_request_notification(
+                            manager=manager,
+                            employee=current_user,
+                            week_start=week_start,
+                            week_end=week_end,
+                            request_type=effective_type.value,
+                            reason=reason.strip() if reason else "",
+                        )
+                    )
+        except Exception as email_err:
+            logger.warning("Could not dispatch unlock request email notification: %s", email_err)
+
         return req

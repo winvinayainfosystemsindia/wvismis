@@ -14,6 +14,7 @@ from app.api.v1.endpoints import (
     frontend_compat,
     projects,
     timesheets,
+    email,
 )
 
 router = APIRouter()
@@ -36,6 +37,9 @@ router.include_router(projects.router_tasks)
 # Timesheets & Holidays
 router.include_router(timesheets.router)
 router.include_router(timesheets.router_holidays)
+
+# Email & Notifications
+router.include_router(email.router, prefix="/email", tags=["Email & Notifications"])
 
 # AI Credits, Usage & Agentic Harness
 router.include_router(ai.router)

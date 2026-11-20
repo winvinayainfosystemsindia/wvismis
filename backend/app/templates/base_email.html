@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ subject | default("Notification from WinVinaya MIS") }}</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #1e293b;
+            margin: 0;
+            padding: 0;
+            background-color: #f1f5f9;
+        }
+        .wrapper {
+            width: 100%;
+            background-color: #f1f5f9;
+            padding: 30px 15px;
+        }
+        .container {
+            max-width: 620px;
+            margin: 0 auto;
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+            border: 1px solid #e2e8f0;
+        }
+        .header {
+            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+            color: #ffffff;
+            padding: 26px 36px;
+            text-align: left;
+        }
+        .header-brand {
+            display: flex;
+            align-items: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 700;
+            color: #ffffff;
+            letter-spacing: -0.02em;
+        }
+        .header p {
+            margin: 4px 0 0 0;
+            font-size: 13px;
+            color: #bfdbfe;
+        }
+        .content {
+            padding: 32px 36px;
+        }
+        .content h2 {
+            color: #0f172a;
+            margin-top: 0;
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+        }
+        .summary-card {
+            background-color: #f8fafc;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            border-left: 4px solid #2563eb;
+            padding: 16px 20px;
+            margin: 20px 0;
+        }
+        .stat-grid {
+            display: table;
+            width: 100%;
+            margin: 18px 0;
+        }
+        .stat-cell {
+            display: table-cell;
+            width: 50%;
+            padding: 10px;
+            vertical-align: top;
+            background: #f8fafc;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+        }
+        .stat-val {
+            font-size: 22px;
+            font-weight: 800;
+            color: #0f172a;
+            margin-top: 4px;
+        }
+        .stat-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            font-weight: 600;
+            color: #64748b;
+            letter-spacing: 0.05em;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 13.5px;
+        }
+        .data-table th {
+            background-color: #f8fafc;
+            color: #475569;
+            font-weight: 600;
+            text-align: left;
+            padding: 10px 12px;
+            border-bottom: 2px solid #e2e8f0;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .data-table td {
+            padding: 12px;
+            border-bottom: 1px solid #e2e8f0;
+            color: #1e293b;
+        }
+        .badge {
+            display: inline-block;
+            padding: 3px 9px;
+            font-size: 11px;
+            font-weight: 700;
+            border-radius: 9999px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .badge-success { background-color: #dcfce7; color: #15803d; }
+        .badge-warning { background-color: #fef3c7; color: #b45309; }
+        .badge-danger { background-color: #fee2e2; color: #b91c1c; }
+        .badge-info { background-color: #dbeafe; color: #1d4ed8; }
+        .button-wrapper {
+            margin: 28px 0 10px 0;
+            text-align: center;
+        }
+        .btn-primary {
+            display: inline-block;
+            background-color: #2563eb;
+            color: #ffffff !important;
+            padding: 12px 28px;
+            font-size: 14px;
+            font-weight: 600;
+            border-radius: 8px;
+            text-decoration: none;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        .btn-primary:hover {
+            background-color: #1d4ed8;
+        }
+        .footer {
+            background-color: #f8fafc;
+            padding: 24px 36px;
+            border-top: 1px solid #e2e8f0;
+            text-align: center;
+            font-size: 12px;
+            color: #64748b;
+        }
+        .footer p { margin: 4px 0; }
+        .footer a { color: #2563eb; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <div class="container">
+            <div class="header">
+                <h1>WinVinaya MIS</h1>
+                <p>Enterprise Management Information System</p>
+            </div>
+            <div class="content">
+                {% block content %}{% endblock %}
+            </div>
+            <div class="footer">
+                <p>&copy; {{ current_year | default(2026) }} WinVinaya Infosystems. All rights reserved.</p>
+                <p>This is an automated system notification from your WinVinaya MIS workspace.</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

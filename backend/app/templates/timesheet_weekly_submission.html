@@ -1,0 +1,60 @@
+{% extends "base_email.html" %}
+
+{% block content %}
+<h2>Weekly Timesheet Submitted for Approval</h2>
+<p>Hello <strong>{{ manager_name }}</strong>,</p>
+<p>
+    <strong>{{ employee_name }}</strong> has submitted their weekly timesheet for the week of <strong>{{ week_start }} to {{ week_end }}</strong> for your final review and approval.
+</p>
+
+<div class="stat-grid">
+    <div class="stat-cell" style="margin-right: 8px;">
+        <div class="stat-label">Total Logged</div>
+        <div class="stat-val" style="color: #2563eb;">{{ total_hours }}h</div>
+    </div>
+    <div class="stat-cell">
+        <div class="stat-label">Weekly Target</div>
+        <div class="stat-val">{{ target_hours | default(40.0) }}h</div>
+    </div>
+</div>
+
+<div class="summary-card" style="margin-top: 10px;">
+    <p style="margin: 0; font-size: 13.5px; color: #334155;">
+        <strong>Billable Hours:</strong> {{ billable_hours }}h &nbsp;|&nbsp; 
+        <strong>Non-Billable:</strong> {{ non_billable_hours }}h &nbsp;|&nbsp; 
+        <strong>Entries Count:</strong> {{ entries_count }}
+    </p>
+</div>
+
+<h3 style="font-size: 15px; margin: 24px 0 8px 0; color: #334155;">Daily Summary</h3>
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>Day</th>
+            <th>Logged Hours</th>
+            <th>Status</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for day in days %}
+        <tr>
+            <td>{{ day.date }}</td>
+            <td style="font-weight: 600;">{{ day.day_name }}</td>
+            <td style="font-weight: 700;">{{ day.hours }}h</td>
+            <td>
+                <span class="badge badge-warning">SUBMITTED</span>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<div class="button-wrapper">
+    <a href="{{ action_url | default('#') }}" class="btn-primary">Approve / Review Timesheet</a>
+</div>
+
+<p style="font-size: 12px; color: #64748b; text-align: center; margin-top: 20px;">
+    Once approved, the week will be locked. Any subsequent modifications will require an approved Revoke Request.
+</p>
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends "base_email.html" %}
+
+{% block content %}
+<h2>New Task Assigned: {{ task_title }}</h2>
+<p>Hello <strong>{{ assignee_name }}</strong>,</p>
+<p>
+    You have been assigned a task on project <strong>{{ project_name }}</strong>.
+</p>
+
+<div class="summary-card">
+    <div style="font-size: 16px; font-weight: 700; color: #0f172a; margin-bottom: 6px;">
+        {{ task_title }}
+    </div>
+    {% if description %}
+    <p style="margin: 0 0 10px 0; color: #475569; font-size: 13.5px;">
+        {{ description }}
+    </p>
+    {% endif %}
+    <div style="font-size: 13px; color: #64748b;">
+        <strong>Priority:</strong> <span class="badge {% if priority == 'urgent' or priority == 'high' %}badge-danger{% else %}badge-info{% endif %}">{{ priority | upper }}</span> &nbsp;|&nbsp;
+        <strong>Due Date:</strong> {{ due_date | default("Not set") }} &nbsp;|&nbsp;
+        <strong>Estimated Hours:</strong> {{ estimated_hours | default("—") }}h
+    </div>
+</div>
+
+<div class="button-wrapper">
+    <a href="{{ action_url | default('#') }}" class="btn-primary">View Task in Projects</a>
+</div>
+{% endblock %}

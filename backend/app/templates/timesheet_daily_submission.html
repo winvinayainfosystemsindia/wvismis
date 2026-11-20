@@ -1,0 +1,61 @@
+{% extends "base_email.html" %}
+
+{% block content %}
+<h2>Daily Timesheet (DSR) Submitted</h2>
+<p>Hello <strong>{{ manager_name }}</strong>,</p>
+<p>
+    <strong>{{ employee_name }}</strong> has submitted their daily timesheet for <strong>{{ log_date }}</strong>.
+</p>
+
+<div class="summary-card">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <div style="font-size: 12px; color: #64748b; font-weight: 600; text-transform: uppercase;">Employee</div>
+            <div style="font-size: 16px; font-weight: 700; color: #0f172a;">{{ employee_name }} ({{ employee_email }})</div>
+        </div>
+        <div style="text-align: right;">
+            <div style="font-size: 12px; color: #64748b; font-weight: 600; text-transform: uppercase;">Total Hours</div>
+            <div style="font-size: 20px; font-weight: 800; color: #2563eb;">{{ total_hours }} hrs</div>
+        </div>
+    </div>
+</div>
+
+<h3 style="font-size: 15px; margin: 24px 0 8px 0; color: #334155;">Task & Activity Breakdown</h3>
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Project / Target</th>
+            <th>Type</th>
+            <th>Hours</th>
+            <th>Notes / Work Done</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in items %}
+        <tr>
+            <td>
+                <strong>{{ item.project_name | default(item.category_name) | default("General") }}</strong>
+                {% if item.task_title %}
+                <div style="font-size: 12px; color: #64748b;">{{ item.task_title }}</div>
+                {% endif %}
+            </td>
+            <td>
+                <span class="badge {% if item.billing_type == 'billable' %}badge-success{% else %}badge-info{% endif %}">
+                    {{ item.billing_type | default("billable") }}
+                </span>
+            </td>
+            <td style="font-weight: 700;">{{ item.hours }}h</td>
+            <td style="color: #475569;">{{ item.notes | default("—") }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<div class="button-wrapper">
+    <a href="{{ action_url | default('#') }}" class="btn-primary">Review in WinVinaya MIS</a>
+</div>
+
+<p style="font-size: 12px; color: #64748b; text-align: center; margin-top: 20px;">
+    Daily timesheets remain available for employee modification until final weekly manager approval.
+</p>
+{% endblock %}

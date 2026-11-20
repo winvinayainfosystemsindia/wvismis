@@ -1,0 +1,28 @@
+{% extends "base_email.html" %}
+
+{% block content %}
+<h2>Timesheet {{ request_type | upper }} Request</h2>
+<p>Hello <strong>{{ manager_name }}</strong>,</p>
+<p>
+    <strong>{{ employee_name }}</strong> has submitted a request to <strong>{{ request_type | upper }}</strong> their timesheet for the week of <strong>{{ week_start }} to {{ week_end }}</strong>.
+</p>
+
+<div class="summary-card" style="border-left-color: #8b5cf6; background-color: #f5f3ff;">
+    <div style="font-size: 12px; color: #6b21a8; font-weight: 700; text-transform: uppercase;">Employee's Stated Reason</div>
+    <div style="font-size: 14px; color: #4c1d95; margin-top: 4px; font-style: italic;">
+        "{{ reason }}"
+    </div>
+</div>
+
+<p>
+    {% if request_type == "revoke" %}
+    Granting this request will revoke the final approval and re-open the week so the employee can modify entries and resubmit.
+    {% else %}
+    Granting this request will grant a one-shot unlock allowing the employee to log and submit time in this past ended week.
+    {% endif %}
+</p>
+
+<div class="button-wrapper">
+    <a href="{{ action_url | default('#') }}" class="btn-primary">Review Request in MIS</a>
+</div>
+{% endblock %}

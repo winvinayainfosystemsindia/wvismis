@@ -1,0 +1,28 @@
+{% extends "base_email.html" %}
+
+{% block content %}
+<h2>Reminder: Pending Timesheet Submission</h2>
+<p>Hello <strong>{{ employee_name }}</strong>,</p>
+<p>
+    This is a friendly reminder that you have pending or incomplete timesheet logs for the week of <strong>{{ week_start }} to {{ week_end }}</strong>.
+</p>
+
+<div class="summary-card" style="border-left-color: #f59e0b; background-color: #fffbeb;">
+    <p style="margin: 0; color: #92400e; font-size: 14px;">
+        <strong>Logged So Far:</strong> {{ total_hours }} hrs / {{ target_hours | default(40.0) }} hrs target
+    </p>
+    {% if missing_days %}
+    <p style="margin: 8px 0 0 0; color: #b45309; font-size: 13px;">
+        <strong>Missing Days:</strong> {{ missing_days | join(", ") }}
+    </p>
+    {% endif %}
+</div>
+
+<p>
+    Please ensure your work hours and task descriptions are logged accurately and submitted on time for manager approval.
+</p>
+
+<div class="button-wrapper">
+    <a href="{{ action_url | default('#') }}" class="btn-primary">Log & Submit Timesheet</a>
+</div>
+{% endblock %}

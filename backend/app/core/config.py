@@ -152,6 +152,17 @@ class Settings(BaseSettings):
         "application/zip",
     ]
 
+    # ── Email & SMTP Configuration ──────────────────────────────────────────
+    SMTP_TLS: bool = True
+    SMTP_PORT: int = 587
+    SMTP_HOST: Optional[str] = "s.mail25.info"
+    SMTP_USER: Optional[str] = "no-reply@winvinaya.com"
+    SMTP_PASSWORD: Optional[str] = "Admin##2025@"
+    EMAILS_FROM_EMAIL: str = "no-reply@winvinaya.com"
+    EMAILS_FROM_NAME: str = "winvinaya"
+    EMAIL_NOTIFICATIONS_ENABLED: bool = True
+    TIMESHEET_SUBMISSION_EMAIL: Optional[str] = None
+
     model_config = SettingsConfigDict(
         env_file=_resolve_env_file(),
         env_file_encoding="utf-8",

@@ -1,0 +1,35 @@
+{% extends "base_email.html" %}
+
+{% block content %}
+<h2>Timesheet {{ decision | upper }}</h2>
+<p>Hello <strong>{{ employee_name }}</strong>,</p>
+
+{% if decision == "approved" %}
+<div class="summary-card" style="border-left-color: #10b981; background-color: #f0fdf4;">
+    <p style="margin: 0; color: #166534; font-size: 15px; font-weight: 600;">
+        ✅ Your timesheet for the week of <strong>{{ week_start }} to {{ week_end }}</strong> has received final approval from your manager <strong>{{ approver_name }}</strong>.
+    </p>
+</div>
+<p>
+    A total of <strong>{{ total_hours }} hours</strong> across <strong>{{ entries_count }} entries</strong> have been officially recorded.
+</p>
+{% else %}
+<div class="summary-card" style="border-left-color: #ef4444; background-color: #fef2f2;">
+    <p style="margin: 0; color: #991b1b; font-size: 15px; font-weight: 600;">
+        ⚠️ Your timesheet for the week of <strong>{{ week_start }} to {{ week_end }}</strong> was rejected by <strong>{{ approver_name }}</strong>.
+    </p>
+    {% if note %}
+    <p style="margin: 8px 0 0 0; color: #7f1d1d; font-size: 13.5px;">
+        <strong>Manager Note:</strong> "{{ note }}"
+    </p>
+    {% endif %}
+</div>
+<p>
+    Please review the manager's comments, adjust your time log entries, and re-submit for approval.
+</p>
+{% endif %}
+
+<div class="button-wrapper">
+    <a href="{{ action_url | default('#') }}" class="btn-primary">View Timesheet in MIS</a>
+</div>
+{% endblock %}

@@ -13,6 +13,7 @@ from app.api.v1.endpoints import (
     ai_chat,
     frontend_compat,
     projects,
+    timesheets,
 )
 
 router = APIRouter()
@@ -31,6 +32,10 @@ router.include_router(websockets.router)
 # Project Management & Tasks
 router.include_router(projects.router)
 router.include_router(projects.router_tasks)
+
+# Timesheets & Holidays
+router.include_router(timesheets.router)
+router.include_router(timesheets.router_holidays)
 
 # AI Credits, Usage & Agentic Harness
 router.include_router(ai.router)

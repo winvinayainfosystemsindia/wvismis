@@ -35,6 +35,7 @@ import AICreditsUsagePage from '../pages/settings/AICreditsUsagePage';
 import ProjectsListPage from '../pages/projects/ProjectsListPage';
 import ProjectDetailPage from '../pages/projects/ProjectDetailPage';
 import ProjectStatusPage from '../pages/projects/public/ProjectStatusPage';
+import TimesheetPage from '../pages/timesheets/TimesheetPage';
 import { Navigate, useLocation } from './tanstackCompat';
 
 const LegacyAuthRedirect: React.FC<{ to: string }> = ({ to }) => {
@@ -210,6 +211,7 @@ const [billingRoute, orgBillingRoute] = createAppAndTenantRoutes('/billing', Bil
 const [aiUsageRoute, orgAiUsageRoute] = createAppAndTenantRoutes('/ai-usage', AICreditsUsagePage);
 const [projectsRoute, orgProjectsRoute] = createAppAndTenantRoutes('/projects', ProjectsListPage);
 const [projectDetailRoute, orgProjectDetailRoute] = createAppAndTenantRoutes('/projects/$projectId', ProjectDetailPage);
+const [timesheetsRoute, orgTimesheetsRoute] = createAppAndTenantRoutes('/timesheets', TimesheetPage);
 const publicProjectStatusRoute = createRoute({
 	getParentRoute: () => rootRoute,
 	path: '/projects/status/$token',
@@ -252,6 +254,8 @@ const routeTree = rootRoute.addChildren([
 			orgProjectsRoute,
 			projectDetailRoute,
 			orgProjectDetailRoute,
+			timesheetsRoute,
+			orgTimesheetsRoute,
 			organizationsRoute,
 			billingRoute,
 			orgBillingRoute,

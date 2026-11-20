@@ -20,6 +20,17 @@ from app.models.project import (
     ProjectTaskFile,
     LeadPriority,
 )
+from app.models.timesheet import (
+    TimesheetBillingType,
+    TimesheetStatus,
+    HolidayType,
+    WeekUnlockStatus,
+    UserTimesheetCategory,
+    OrgHoliday,
+    TimesheetUserSettings,
+    ProjectTimeLog,
+    TimesheetWeekUnlockRequest,
+)
 
 __all__ = [
     "BaseModel",
@@ -53,4 +64,13 @@ __all__ = [
     "ProjectTaskStatus",
     "ProjectTaskFile",
     "LeadPriority",
+    "TimesheetBillingType",
+    "TimesheetStatus",
+    "HolidayType",
+    "WeekUnlockStatus",
+    "UserTimesheetCategory",
+    "OrgHoliday",
+    "TimesheetUserSettings",
+    "ProjectTimeLog",
+    "TimesheetWeekUnlockRequest",
 ]

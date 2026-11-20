@@ -8,6 +8,7 @@ import {
 	Shield as SecurityIcon,
 	Notifications as NotificationsIcon,
 	ArrowBack as BackIcon,
+	PendingActions as TimesheetIcon,
 } from '@mui/icons-material';
 import type { SvgIconComponent } from '@mui/icons-material';
 
@@ -46,6 +47,11 @@ export const topNavigation: NavigationItem[] = [
 				path: '/projects',
 				icon: ProjectsIcon,
 				roles: ['admin', 'manager', 'project_coordinator', 'developer'],
+			},
+			{
+				label: 'Timesheets',
+				path: '/timesheets',
+				icon: TimesheetIcon,
 			},
 			{
 				label: 'Billing',

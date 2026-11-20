@@ -5,7 +5,7 @@ from __future__ import annotations
 import enum
 import uuid
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 from sqlalchemy import String, Boolean, Enum, Integer, ForeignKey, Uuid, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import BaseModel, TenantMixin
@@ -130,9 +130,23 @@ class User(BaseModel, TenantMixin):
         comment="Associated organization ID (cannot be null; defaults to parent org)",
     )
 
+    timezone: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    reporting_manager_id: Mapped[int | None] = mapped_column(
+        Integer,
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+
     # Multi-tenant Organization relationship
     organization: Mapped[Organization] = relationship(
         "Organization",
+        lazy="selectin",
+    )
+
+    reporting_manager: Mapped[Optional["User"]] = relationship(
+        "User",
+        remote_side="User.id",
         lazy="selectin",
     )
 

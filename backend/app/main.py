@@ -23,6 +23,7 @@ from app.core.rate_limiter import limiter
 from app.core.websocket import ws_manager
 from app.middleware.logging import LoggingMiddleware
 from app.middleware.error_handler import ErrorHandlerMiddleware
+from app.middleware.timezone import TimezoneMiddleware
 from app.api.v1.router import router as v1_router
 
 
@@ -41,6 +42,17 @@ async def lifespan(app: FastAPI):
 
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
+            await conn.execute(text("""
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='timezone') THEN
+                        ALTER TABLE users ADD COLUMN timezone VARCHAR(64);
+                    END IF;
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='reporting_manager_id') THEN
+                        ALTER TABLE users ADD COLUMN reporting_manager_id INTEGER REFERENCES users(id) ON DELETE SET NULL;
+                    END IF;
+                END $$;
+            """))
 
         async with AsyncSessionLocal() as session:
             await init_parent_org_and_superuser(session)
@@ -107,6 +119,7 @@ app.add_middleware(
 # Custom Logging & Error Handling Middleware
 app.add_middleware(LoggingMiddleware)
 app.add_middleware(ErrorHandlerMiddleware)
+app.add_middleware(TimezoneMiddleware)
 
 # API Version 1 Router (/api/v1)
 app.include_router(

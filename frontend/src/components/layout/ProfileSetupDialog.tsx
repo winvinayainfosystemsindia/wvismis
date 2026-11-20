@@ -95,7 +95,7 @@ const ProfileSetupDialog: React.FC<ProfileSetupDialogProps> = ({ open }) => {
 					<PublicIcon />
 				</Box>
 				<Typography variant="h6" sx={{ fontWeight: 800 }}>
-					Welcome to Gravit
+					Welcome to WinVinaya MIS
 				</Typography>
 			</DialogTitle>
 			<DialogContent>

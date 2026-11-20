@@ -1,4 +1,4 @@
-"""SQLAlchemy models for the Gravit Project Management module.
+"""SQLAlchemy models for the WinVinaya MIS Project Management module.
 
 A Won CRMDeal converts into a Project (see CRMDeal.project_id / Project.deal_id,
 mirroring the existing CRMLead.deal_id <-> CRMDeal.lead_id pair). A Project holds

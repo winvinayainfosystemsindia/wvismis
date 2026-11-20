@@ -5,7 +5,6 @@ import { ErrorOutline as ErrorIcon, CalendarMonthOutlined, BusinessOutlined, Tas
 import dayjs from 'dayjs';
 import projectService from '../../../services/projectService';
 import StatusBadge from '../../../components/common/badge/StatusBadge';
-import { useColorMode } from '../../../theme/ThemeContext';
 import type { PublicProject } from '../../../models/projects/project';
 
 /** Strips HTML tags for a plain-text preview -- same helper as ProjectDetailHeader. */
@@ -17,7 +16,6 @@ const htmlToPlainText = (html: string): string => {
 
 const ProjectStatusPage: React.FC = () => {
 	const theme = useTheme();
-	const { mode: colorMode } = useColorMode();
 	const [searchParams] = useSearchParams();
 	const token = searchParams.get('token');
 
@@ -58,9 +56,9 @@ const ProjectStatusPage: React.FC = () => {
 				<Box sx={{ mb: 4, textAlign: 'center' }}>
 					<Box
 						component="img"
-						src={colorMode === 'dark' ? '/assets/img/logo/gravit-dark.svg' : '/assets/img/logo/gravit-light.svg'}
-						alt="Gravit Logo"
-						sx={{ height: 48, mb: 1.5 }}
+						src="/assets/img/logo/winvinaya-logo-adaptive.svg"
+						alt="WinVinaya MIS"
+						sx={{ height: 48, mb: 1.5, objectFit: 'contain' }}
 					/>
 				</Box>
 

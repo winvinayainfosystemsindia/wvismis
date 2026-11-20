@@ -249,7 +249,7 @@ const PreferencesTab: React.FC = () => {
 					p: 3,
 				}}
 			>
-				<SectionHeader icon={<AppearanceIcon sx={{ fontSize: 16 }} />} title="Appearance" subtitle="Choose how Gravit looks on this device" isDark={isDark} textColor={textColor} labelColor={labelColor} />
+				<SectionHeader icon={<AppearanceIcon sx={{ fontSize: 16 }} />} title="Appearance" subtitle="Choose how WinVinaya MIS looks on this device" isDark={isDark} textColor={textColor} labelColor={labelColor} />
 				<Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
 					{themeOptions.map((opt) => {
 						const isSelected = selectedTheme === opt.key;

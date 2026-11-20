@@ -410,7 +410,7 @@ export const TaskCreateDescription: React.FC<TaskCreateDescriptionProps> = ({
 					>
 						{isEnhancing ? <CircularProgress size={14} /> : <AutoAwesomeOutlined sx={{ fontSize: 14 }} />}
 						<Typography variant="caption" sx={{ fontWeight: 600 }}>
-							{isEnhancing ? 'Writing…' : 'Write with Gravit'}
+							{isEnhancing ? 'Writing…' : 'Write with AI'}
 						</Typography>
 					</Stack>
 				</Box>

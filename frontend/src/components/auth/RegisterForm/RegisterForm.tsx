@@ -92,8 +92,8 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccessChange, onVerified
 						</Typography>
 						<Typography variant="body2" sx={{ color: '#94A3B8', fontWeight: 500, fontSize: '0.825rem' }}>
 							{accountType === 'individual'
-								? 'Set up your personal workspace on Gravit'
-								: 'Start managing your infrastructure with Gravit'}
+								? 'Set up your personal workspace on WinVinaya MIS'
+								: 'Start managing your infrastructure with WinVinaya MIS'}
 						</Typography>
 					</Box>
 

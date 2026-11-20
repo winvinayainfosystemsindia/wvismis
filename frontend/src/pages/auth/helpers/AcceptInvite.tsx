@@ -155,32 +155,14 @@ const AcceptInvite: React.FC = () => {
 								overflow: 'hidden',
 							}}
 						>
-							{/* Top Centered Brand Icon Box */}
+							{/* Top Centered Brand Logo */}
 							<Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
 								<Box
-									sx={{
-										backgroundColor: '#1c1e2b',
-										p: 1.5,
-										borderRadius: 2,
-										display: 'flex',
-										border: '1px solid rgba(139, 124, 246, 0.2)',
-										boxShadow: '0 4px 12px rgba(139, 124, 246, 0.1)',
-									}}
-								>
-									{/* Embedded SVG of Gravit G symbol mark */}
-									<svg width="40" height="40" viewBox="0 0 180 180" xmlns="http://www.w3.org/2000/svg">
-										<defs>
-											<linearGradient id="lum-card-icon" x1="0" y1="0" x2="1" y2="1">
-												<stop offset="0" stopColor="#8B7CF6"/>
-												<stop offset="1" stopColor="#4EA8FF"/>
-											</linearGradient>
-										</defs>
-										<g transform="translate(90,90) scale(0.92)">
-											<path d="M 36 -54 A 65 65 0 1 0 65 12 L 18 12" fill="none" stroke="url(#lum-card-icon)" strokeWidth="13" strokeLinecap="round"/>
-											<circle cx="58" cy="-66" r="10" fill="#4EA8FF"/>
-										</g>
-									</svg>
-								</Box>
+									component="img"
+									src="/assets/img/logo/winvinaya-logo-dark.svg"
+									alt="WinVinaya MIS"
+									sx={{ height: 44, maxWidth: 240, objectFit: 'contain' }}
+								/>
 							</Box>
 
 							{/* Heading and Subheading */}
@@ -190,7 +172,7 @@ const AcceptInvite: React.FC = () => {
 								</Typography>
 								<Typography variant="body2" sx={{ color: '#94A3B8', fontWeight: 500 }}>
 									{status === 'form'
-										? "You've been invited to join Gravit. Choose a password to activate your account."
+										? "You've been invited to join WinVinaya MIS. Choose a password to activate your account."
 										: status === 'success'
 										? 'Redirecting you to your dashboard...'
 										: 'This invite link is invalid or has expired.'}

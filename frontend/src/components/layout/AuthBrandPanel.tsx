@@ -65,15 +65,27 @@ const AuthBrandPanel: React.FC<AuthBrandPanelProps> = ({ variant = 'register', a
 
 			<Box sx={{ position: 'relative', maxWidth: 420 }}>
 				<Box
-					component="img"
-					src="/assets/img/logo/gravit-dark.svg"
-					alt="Gravit"
-					sx={{ height: 60, cursor: 'pointer', mb: 5 }}
 					onClick={() => navigate('/')}
-				/>
+					sx={{
+						display: 'inline-flex',
+						alignItems: 'center',
+						cursor: 'pointer',
+						mb: 4,
+					}}
+				>
+					<Box
+						component="img"
+						src="/assets/img/logo/winvinaya-logo-dark.svg"
+						alt="WinVinaya MIS"
+						sx={{ height: 48, maxWidth: 260, objectFit: 'contain' }}
+					/>
+				</Box>
 
-				<Typography component="h2" variant="h4" sx={{ fontWeight: 800, color: theme.layout.authPanel.text, mb: 2, lineHeight: 1.25 }}>
+				<Typography component="h2" variant="h4" sx={{ fontWeight: 800, color: theme.layout.authPanel.text, mb: 1.5, lineHeight: 1.25 }}>
 					{title}
+				</Typography>
+				<Typography variant="caption" sx={{ display: 'block', color: theme.palette.accent.main, fontWeight: 600, mb: 2, letterSpacing: '0.04em' }}>
+					Designed & Powered by WinVinaya InfoSystems
 				</Typography>
 				<Typography variant="body1" sx={{ color: theme.layout.authPanel.textMuted, mb: 6, lineHeight: 1.6 }}>
 					{description}

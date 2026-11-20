@@ -1,20 +1,20 @@
 // Raw markdown body rendered by PrivacyPolicyPage. Kept as data (not JSX) so the
 // legal text can be reviewed/edited on its own, separate from page layout code.
 const privacyPolicyContent = `
-# Privacy Policy — Gravit
+# Privacy Policy — WinVinaya MIS
 
 **Effective Date:** 27th July 2026 \n
 **Last Updated:** 27th July 2026
 
 ---
 
-> **Note before publishing:** This document is a detailed, GDPR-aligned draft built specifically around Gravit's actual data practices (CRM, Projects, Timesheets, HR & Payroll, Meeting Booking, and the IRIS AI agent). Placeholders like \`[Insert ...]\` need to be filled in with your legal entity details, and the finished document should be reviewed by a qualified data protection lawyer before publication — this is standard practice for any privacy policy and isn't a reflection of anything missing here.
+> **Note before publishing:** This document is a detailed, GDPR-aligned draft built specifically around WinVinaya MIS's actual data practices (CRM, Projects, Timesheets, HR & Payroll, Meeting Booking, and the IRIS AI agent). Placeholders like \`[Insert ...]\` need to be filled in with your legal entity details, and the finished document should be reviewed by a qualified data protection lawyer before publication — this is standard practice for any privacy policy and isn't a reflection of anything missing here.
 
 ---
 
 ## 1. Introduction
 
-Gravit ("**Gravit**," "**we**," "**us**," or "**our**") is a unified business operations platform provided by **[Insert Legal Entity Name, e.g. Taydens Pvt. Ltd.]** ("**Taydens**," "**the Company**"). Gravit brings together CRM, project management, timesheets & billing, HR & payroll, meeting scheduling, and IRIS — our built-in AI agent — into a single workspace for small and medium-sized businesses.
+WinVinaya MIS ("**WinVinaya MIS**," "**we**," "**us**," or "**our**") is a unified business operations platform provided by **[Insert Legal Entity Name, e.g. WinVinaya InfoSystems Pvt. Ltd.]** ("**WinVinaya InfoSystems**," "**the Company**"). WinVinaya MIS brings together CRM, project management, timesheets & billing, HR & payroll, meeting scheduling, and IRIS — our built-in AI agent — into a single workspace for small and medium-sized businesses.
 
 This Privacy Policy explains, in plain terms:
 - what personal data we collect and where it comes from,
@@ -25,17 +25,17 @@ This Privacy Policy explains, in plain terms:
 - who we share it with,
 - and the rights you have over your own data.
 
-This Policy applies to everyone who uses Gravit — account owners, team members invited into a workspace, and individuals whose data is entered into Gravit by our customers (for example, a CRM lead or an employee record). It is written to meet the requirements of the **EU/UK General Data Protection Regulation (GDPR)**, and applies to all users regardless of location, as a matter of consistent practice.
+This Policy applies to everyone who uses WinVinaya MIS — account owners, team members invited into a workspace, and individuals whose data is entered into WinVinaya MIS by our customers (for example, a CRM lead or an employee record). It is written to meet the requirements of the **EU/UK General Data Protection Regulation (GDPR)**, and applies to all users regardless of location, as a matter of consistent practice.
 
 ---
 
 ## 2. Who Controls Your Data
 
-For data relating to your own Gravit account (your name, login email, billing details), **Taydens** is the **Data Controller**.
+For data relating to your own WinVinaya MIS account (your name, login email, billing details), **WinVinaya InfoSystems** is the **Data Controller**.
 
-For data that our business customers ("**Organizations**") enter into Gravit about their own employees, leads, clients, or candidates (for example, a company using Gravit's HR module to store its employees' payroll data), the **Organization is the Data Controller**, and **Taydens acts as a Data Processor**, processing that data only on the Organization's documented instructions, as governed by our Data Processing Agreement (DPA) with that Organization.
+For data that our business customers ("**Organizations**") enter into WinVinaya MIS about their own employees, leads, clients, or candidates (for example, a company using WinVinaya MIS's HR module to store its employees' payroll data), the **Organization is the Data Controller**, and **WinVinaya InfoSystems acts as a Data Processor**, processing that data only on the Organization's documented instructions, as governed by our Data Processing Agreement (DPA) with that Organization.
 
-If you are an employee, lead, or contact whose data appears in someone else's Gravit workspace, and you have questions about that data, you should contact that Organization directly. Taydens will support that Organization in responding to you, as required under GDPR.
+If you are an employee, lead, or contact whose data appears in someone else's WinVinaya MIS workspace, and you have questions about that data, you should contact that Organization directly. WinVinaya InfoSystems will support that Organization in responding to you, as required under GDPR.
 
 **Data Protection contact:**
 [Insert Company Name]
@@ -47,21 +47,21 @@ Data Protection Officer (if appointed): [Insert Name/Contact or "Not applicable 
 
 ## 3. What Personal Data We Collect, Where It Comes From, and Where It's Stored
 
-We only collect personal data that is necessary to provide and secure the Gravit service. The table below maps each category of data to its source, its purpose, and where it lives — in line with GDPR's transparency and data-mapping requirements.
+We only collect personal data that is necessary to provide and secure the WinVinaya MIS service. The table below maps each category of data to its source, its purpose, and where it lives — in line with GDPR's transparency and data-mapping requirements.
 
 | Data Category | Examples | Where It Comes From | How We Use It | Where It's Stored |
 |---|---|---|---|---|
 | **Account & identity data** | Full name, work email, phone number, job title, company name | Provided directly by you at sign-up or when invited to a workspace | Account creation, authentication, workspace access, communication | Primary application database, hosted at [Insert region/provider, e.g. AWS ap-south-1] |
-| **Billing & payment data** | Billing name, address, GSTIN (if applicable), plan tier, invoice history. **Full card/payment credentials are handled entirely by our payment processor and are never stored on Gravit's own servers.** | Provided by you during checkout/upgrade | Subscription billing, invoicing, tax compliance, fraud prevention | Payment tokens and transaction records held by our PCI-DSS compliant payment processor ([Insert processor name, e.g. Razorpay/Stripe]); billing metadata (plan, invoice number, amount) stored in our application database |
+| **Billing & payment data** | Billing name, address, GSTIN (if applicable), plan tier, invoice history. **Full card/payment credentials are handled entirely by our payment processor and are never stored on WinVinaya MIS's own servers.** | Provided by you during checkout/upgrade | Subscription billing, invoicing, tax compliance, fraud prevention | Payment tokens and transaction records held by our PCI-DSS compliant payment processor ([Insert processor name, e.g. Razorpay/Stripe]); billing metadata (plan, invoice number, amount) stored in our application database |
 | **CRM data** | Lead/contact names, emails, phone numbers, company details, deal values, notes, activity history | Entered by users of an Organization's workspace, or imported from spreadsheets/other tools | Enabling the Organization's sales pipeline management | Primary application database, scoped to the Organization's tenant |
 | **HR & payroll data** | Employee records, department/designation, salary structure, payslips, leave records, uploaded HR documents | Entered by an Organization's HR/admin users | Enabling payroll processing, leave management, document storage for the Organization | Primary application database and secured document storage, scoped to the Organization's tenant; salary and payslip data held with additional access restrictions (see Section 8) |
 | **Project & timesheet data** | Task assignments, project notes, logged hours, billing flags | Entered by users during normal use of the Projects/Timesheets modules | Project tracking, time-based billing | Primary application database, scoped to the Organization's tenant |
 | **Meeting & booking data** | Meeting attendee names/emails, scheduled times, meeting links, reschedule/cancellation history | Entered by users or booked by external invitees via public booking pages | Scheduling and calendar coordination | Primary application database; where a user connects Google Meet or a similar calendar integration, data also passes through that third-party provider under their own terms |
 | **IRIS (AI agent) interaction data** | Prompts/requests sent to IRIS, and the records IRIS reads or creates on your behalf across CRM/Projects/HR/Timesheets/Booking | Generated when a user interacts with IRIS | Carrying out the specific action requested (e.g. "create a follow-up task"), and maintaining an audit log of AI actions for reliability and billing purposes | Primary application database (request logs and audit trail); prompts are transmitted to our AI model providers only for the duration needed to generate a response — see Section 10 |
-| **Technical & usage data** | IP address, browser/device type, login timestamps, pages visited, error logs | Collected automatically when you use Gravit | Security, fraud detection, service reliability, diagnosing issues | Application logs and monitoring infrastructure, retained per the schedule in Section 7 |
+| **Technical & usage data** | IP address, browser/device type, login timestamps, pages visited, error logs | Collected automatically when you use WinVinaya MIS | Security, fraud detection, service reliability, diagnosing issues | Application logs and monitoring infrastructure, retained per the schedule in Section 7 |
 | **Support communications** | Emails, chat messages, or form submissions sent to our support/contact channels | Provided by you when you contact us | Responding to your query, improving the product | Support/helpdesk system, and internal records for as long as needed to resolve and document the matter |
 
-We do **not** knowingly collect any "special category" data (as defined under GDPR Article 9 — e.g. health data, religious beliefs, biometric data) as a core part of the Gravit product. If an Organization chooses to store such data in free-text fields (for example, a medical leave note), that Organization is responsible for ensuring it has a valid lawful basis to do so, and we recommend against storing special category data in free-text fields wherever possible.
+We do **not** knowingly collect any "special category" data (as defined under GDPR Article 9 — e.g. health data, religious beliefs, biometric data) as a core part of the WinVinaya MIS product. If an Organization chooses to store such data in free-text fields (for example, a medical leave note), that Organization is responsible for ensuring it has a valid lawful basis to do so, and we recommend against storing special category data in free-text fields wherever possible.
 
 ---
 
@@ -69,12 +69,12 @@ We do **not** knowingly collect any "special category" data (as defined under GD
 
 Under GDPR, we must have a valid legal basis for every use of personal data. We rely on the following, depending on the data and context:
 
-- **Contract (Article 6(1)(b)):** Processing your account, billing, and workspace data is necessary to provide the Gravit service you've signed up for — we can't run your CRM, payroll, or scheduling without processing the data needed to do so.
+- **Contract (Article 6(1)(b)):** Processing your account, billing, and workspace data is necessary to provide the WinVinaya MIS service you've signed up for — we can't run your CRM, payroll, or scheduling without processing the data needed to do so.
 - **Consent (Article 6(1)(a)):** Where we ask for it specifically — for example, optional marketing emails, or optional cookies beyond what's strictly necessary for the site to function — we rely on your freely given, informed, and specific consent, which you can withdraw at any time (see Section 6).
 - **Legitimate interests (Article 6(1)(f)):** For security monitoring, fraud prevention, service improvement, and maintaining audit logs of AI actions, we rely on our legitimate interest in operating a secure and reliable service — balanced against your right to privacy, and never overriding your interests or fundamental rights.
 - **Legal obligation (Article 6(1)(c)):** For billing records, tax invoices, and responses to lawful requests from authorities, we process data as required to meet our legal and regulatory obligations.
 
-We do **not** process personal data for purposes incompatible with the reasons above, and we do not use client data for any purpose beyond delivering, securing, and improving the Gravit service — we will never use your data, or your Organization's data, for unrelated commercial purposes without a clear, separate legal basis and, where required, your explicit consent.
+We do **not** process personal data for purposes incompatible with the reasons above, and we do not use client data for any purpose beyond delivering, securing, and improving the WinVinaya MIS service — we will never use your data, or your Organization's data, for unrelated commercial purposes without a clear, separate legal basis and, where required, your explicit consent.
 
 ---
 
@@ -111,7 +111,7 @@ We retain personal data only for as long as necessary for the purposes described
 
 | Data Type | Retention Period |
 |---|---|
-| Active account & workspace data | For as long as your account/Organization remains active on Gravit |
+| Active account & workspace data | For as long as your account/Organization remains active on WinVinaya MIS |
 | Billing & invoice records | [Insert period, e.g. 7 years], as required by applicable tax and financial regulations |
 | Data after account cancellation | Retained for [Insert period, e.g. 30-90 days] to allow recovery if cancellation was in error, then permanently deleted or anonymized, unless a longer period is required by law |
 | Support communications | [Insert period, e.g. 2 years] from resolution, for quality and audit purposes |
@@ -147,7 +147,7 @@ If you are located in the EEA/UK, or regardless of location as a matter of our s
 - **Right to restrict processing** — ask us to limit how we use your data in certain circumstances.
 - **Right to data portability** — request your data in a structured, commonly used, machine-readable format, and have it transmitted to another provider where technically feasible.
 - **Right to object** — object to processing based on legitimate interests, or to direct marketing at any time.
-- **Rights related to automated decision-making** — Gravit's IRIS agent acts on user instructions and does not make fully automated decisions that produce legal or similarly significant effects on individuals without human involvement; where any such automated processing is introduced in the future, we will provide the safeguards required under Article 22, including the right to request human review.
+- **Rights related to automated decision-making** — WinVinaya MIS's IRIS agent acts on user instructions and does not make fully automated decisions that produce legal or similarly significant effects on individuals without human involvement; where any such automated processing is introduced in the future, we will provide the safeguards required under Article 22, including the right to request human review.
 
 **How to exercise your rights:** Email [Insert privacy@yourdomain.com] with your request. We will respond within **one month**, as required under GDPR (extendable by a further two months for complex requests, in which case we will explain why). We may need to verify your identity before actioning a request, to protect your data from unauthorized access.
 
@@ -159,7 +159,7 @@ If your data is held within an Organization's workspace (e.g. you're an employee
 
 ## 10. IRIS and AI Processing — What Happens to Your Data
 
-IRIS is Gravit's built-in AI agent, and we want to be direct about how it handles your data:
+IRIS is WinVinaya MIS's built-in AI agent, and we want to be direct about how it handles your data:
 
 - **We do not train any AI model — ours or our providers' — on your data.** Prompts and business data sent to IRIS are used solely to generate the specific response or action you requested, in that moment, and are not used to train, fine-tune, or improve any underlying AI model.
 - IRIS is powered by third-party AI model providers (currently Groq and Google Gemini). These providers process the data required to generate a response but do so under contractual terms that prohibit using your data to train their models.
@@ -192,19 +192,19 @@ Where personal data is transferred outside the EEA/UK (for example, to a hosting
 
 ## 13. Cookies
 
-Gravit uses only the cookies strictly necessary for the website and application to function (e.g. session/authentication cookies), plus optional analytics/preference cookies where you've given consent. For full detail, see our separate [Cookie Policy] link in the footer, where you can also manage your preferences at any time.
+WinVinaya MIS uses only the cookies strictly necessary for the website and application to function (e.g. session/authentication cookies), plus optional analytics/preference cookies where you've given consent. For full detail, see our separate [Cookie Policy] link in the footer, where you can also manage your preferences at any time.
 
 ---
 
 ## 14. Children's Privacy
 
-Gravit is a business tool intended for use by individuals aged 18 and over acting in a professional capacity. We do not knowingly collect personal data from children, and Gravit is not directed at or intended for use by minors.
+WinVinaya MIS is a business tool intended for use by individuals aged 18 and over acting in a professional capacity. We do not knowingly collect personal data from children, and WinVinaya MIS is not directed at or intended for use by minors.
 
 ---
 
 ## 15. Changes to This Policy
 
-We may update this Privacy Policy from time to time to reflect changes in our practices, technology, legal requirements, or the Gravit product itself. We will post the updated Policy with a new "Last Updated" date, and where changes are material, we will notify you directly (e.g. by email or an in-app notice) before they take effect.
+We may update this Privacy Policy from time to time to reflect changes in our practices, technology, legal requirements, or the WinVinaya MIS product itself. We will post the updated Policy with a new "Last Updated" date, and where changes are material, we will notify you directly (e.g. by email or an in-app notice) before they take effect.
 
 ---
 
@@ -212,13 +212,13 @@ We may update this Privacy Policy from time to time to reflect changes in our pr
 
 If you have any questions about this Privacy Policy or how we handle your data, please contact us:
 
-**Taydens Pvt. Ltd.**\n
+**WinVinaya InfoSystems Pvt. Ltd.**\n
 Surampatti, Erode - 638009\n
-Email: privacy-policy@gravit.taydens.com
+Email: privacy-policy@WinVinaya MIS.WinVinaya InfoSystems.com
 
 ---
 
-*This Privacy Policy is designed to reflect Gravit's actual data practices in line with GDPR principles of lawfulness, fairness, transparency, purpose limitation, data minimization, accuracy, storage limitation, integrity, confidentiality, and accountability. It should be reviewed by qualified legal counsel before publication to ensure it fully reflects your specific legal entity structure, jurisdictions of operation, and any local law requirements beyond GDPR.*
+*This Privacy Policy is designed to reflect WinVinaya MIS's actual data practices in line with GDPR principles of lawfulness, fairness, transparency, purpose limitation, data minimization, accuracy, storage limitation, integrity, confidentiality, and accountability. It should be reviewed by qualified legal counsel before publication to ensure it fully reflects your specific legal entity structure, jurisdictions of operation, and any local law requirements beyond GDPR.*
 `;
 
 export default privacyPolicyContent;

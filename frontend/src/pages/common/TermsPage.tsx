@@ -4,8 +4,8 @@ import termsAndConditionsContent from '../../data/termsAndConditionsContent';
 
 const TermsPage: React.FC = () => (
 	<LegalPageLayout
-		pageTitle="Terms and Conditions | Gravit"
-		metaDescription="The terms governing access to and use of Gravit — CRM, Projects, Timesheets & Billing, HR & Payroll, Meeting Booking, and the IRIS AI agent."
+		pageTitle="Terms and Conditions | WinVinaya MIS"
+		metaDescription="The terms governing access to and use of WinVinaya MIS, designed & powered by WinVinaya InfoSystems."
 		content={termsAndConditionsContent}
 	/>
 );

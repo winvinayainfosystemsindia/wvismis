@@ -19,7 +19,7 @@ interface SpinnerProps {
 	/**
 	 * fullPage — renders the full-screen loading experience:
 	 * dark radial-gradient background, ambient aurora glows, and
-	 * the Gravit wordmark logo above the spinner.
+	 * the WinVinaya MIS wordmark logo above the spinner.
 	 * Use this in AuthInitializer / ProtectedRoute so Phase-1 (index.html)
 	 * and Phase-2 (React) look identical with no jarring flash.
 	 */
@@ -71,12 +71,12 @@ export const Spinner: React.FC<SpinnerProps> = ({
 			{/* Dual-ring SVG spinner */}
 			<Box
 				component="img"
-				src="/assets/img/spinner/gravit-spinner-G2-dual-ring.svg"
+				src="/assets/img/spinner/winvinaya-spinner-G2-dual-ring.svg"
 				alt="Loading..."
 				sx={{
 					width: size,
 					height: size,
-					filter: 'drop-shadow(0 0 10px rgba(139, 124, 246, 0.35))',
+					filter: 'drop-shadow(0 0 10px rgba(247, 147, 30, 0.35))',
 					marginBottom: text || fullPage ? '24px' : 0,
 				}}
 			/>

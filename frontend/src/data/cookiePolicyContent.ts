@@ -1,24 +1,24 @@
 // Raw markdown body rendered by CookiePolicyPage. Kept as data (not JSX) so the
 // legal text can be reviewed/edited on its own, separate from page layout code.
 const cookiePolicyContent = `
-# Cookie Policy — Gravit
+# Cookie Policy — WinVinaya MIS
 
 **Effective Date:** 27th July 2026\n
 **Last Updated:** 27th July 2026
 
 ---
 
-> **Note before publishing:** This Cookie Policy is built to work alongside Gravit's Privacy Policy and Terms and Conditions, and is aligned with GDPR/ePrivacy (EU Cookie Law) requirements around consent and transparency. Placeholders like \`[Insert ...]\` need to be filled in with your actual cookie inventory, analytics provider, and consent-tool details once finalized, and this should be reviewed by legal counsel alongside the rest of your policy suite before publication.
+> **Note before publishing:** This Cookie Policy is built to work alongside WinVinaya MIS's Privacy Policy and Terms and Conditions, and is aligned with GDPR/ePrivacy (EU Cookie Law) requirements around consent and transparency. Placeholders like \`[Insert ...]\` need to be filled in with your actual cookie inventory, analytics provider, and consent-tool details once finalized, and this should be reviewed by legal counsel alongside the rest of your policy suite before publication.
 
 ---
 
 ## 1. Introduction
 
-This Cookie Policy explains how **Gravit**, provided by **[Insert Legal Entity Name, e.g. Taydens Pvt. Ltd.]** ("**we**," "**us**," "**our**"), uses cookies and similar tracking technologies on our website and application (the "**Service**"), why we use them, and how you can control them.
+This Cookie Policy explains how **WinVinaya MIS**, provided by **[Insert Legal Entity Name, e.g. WinVinaya InfoSystems Pvt. Ltd.]** ("**we**," "**us**," "**our**"), uses cookies and similar tracking technologies on our website and application (the "**Service**"), why we use them, and how you can control them.
 
 This Policy should be read alongside our [Privacy Policy], which explains more broadly how we handle personal data.
 
-By continuing to use Gravit, and where required by law by giving your consent through our cookie banner/preference center, you agree to our use of cookies as described here — except for strictly necessary cookies, which do not require consent and are essential for the Service to function.
+By continuing to use WinVinaya MIS, and where required by law by giving your consent through our cookie banner/preference center, you agree to our use of cookies as described here — except for strictly necessary cookies, which do not require consent and are essential for the Service to function.
 
 ---
 
@@ -32,16 +32,16 @@ We also use similar technologies where relevant, such as **local storage** and *
 
 ## 3. Categories of Cookies We Use
 
-We group the cookies used on Gravit into four categories, consistent with standard consent-management practice:
+We group the cookies used on WinVinaya MIS into four categories, consistent with standard consent-management practice:
 
 ### 3.1 Strictly Necessary Cookies
 These are essential for the Service to function and cannot be switched off. They do not require your consent under GDPR/ePrivacy rules, because without them, core functionality (like staying logged in) would not work.
 
 | Cookie / Storage Item | Purpose | Duration |
 |---|---|---|
-| \`[Insert e.g. gravit_session]\` | Keeps you authenticated and your workspace session active | Session / [Insert duration] |
+| \`[Insert e.g. WinVinaya MIS_session]\` | Keeps you authenticated and your workspace session active | Session / [Insert duration] |
 | \`[Insert e.g. csrf_token]\` | Protects against cross-site request forgery attacks | Session |
-| \`[Insert e.g. gravit_theme]\` | Remembers your light/dark mode preference | [Insert duration, e.g. 1 year] |
+| \`[Insert e.g. WinVinaya MIS_theme]\` | Remembers your light/dark mode preference | [Insert duration, e.g. 1 year] |
 
 ### 3.2 Functional Cookies
 These remember choices you've made to provide a more personalized experience (for example, dismissing the announcement bar for your current session, or remembering your last-viewed workspace). These require consent in jurisdictions where functional cookies are not considered strictly necessary.
@@ -61,13 +61,13 @@ These help us understand how the Service is used, so we can improve performance 
 These cookies are only set with your consent, where required.
 
 ### 3.4 Marketing Cookies
-[If applicable — e.g. LinkedIn Insight Tag, Meta Pixel, ad retargeting] These track visits across websites to build a profile of your interests and show relevant advertising. **[If Gravit does not currently use marketing cookies, state: "Gravit does not currently use marketing or advertising cookies. If this changes in the future, we will update this Policy and request your consent before enabling them."]**
+[If applicable — e.g. LinkedIn Insight Tag, Meta Pixel, ad retargeting] These track visits across websites to build a profile of your interests and show relevant advertising. **[If WinVinaya MIS does not currently use marketing cookies, state: "WinVinaya MIS does not currently use marketing or advertising cookies. If this changes in the future, we will update this Policy and request your consent before enabling them."]**
 
 ---
 
 ## 4. Third-Party Cookies
 
-Some cookies on Gravit are set by third-party services we rely on to operate the platform:
+Some cookies on WinVinaya MIS are set by third-party services we rely on to operate the platform:
 
 - **Payment processor** ([Insert e.g. Razorpay/Stripe]) — may set cookies during checkout to process payments securely and prevent fraud.
 - **AI infrastructure providers** (Groq, Google Gemini) — do not set cookies in your browser; they process data server-side as described in our Privacy Policy, not via client-side tracking.
@@ -84,7 +84,7 @@ We do not control third-party cookies directly; please refer to each provider's 
 You can manage your cookie preferences (other than strictly necessary cookies, which are always active) at any time via the **"Cookie Settings"** link in the footer of our website. There, you can view each category, and enable or disable non-essential cookies individually.
 
 ### 5.2 Browser Controls
-Most web browsers also allow you to control cookies through their settings, including blocking or deleting cookies entirely. Please note that blocking strictly necessary cookies through your browser will prevent core features of Gravit (such as staying logged in) from working correctly. You can find guidance for common browsers here:
+Most web browsers also allow you to control cookies through their settings, including blocking or deleting cookies entirely. Please note that blocking strictly necessary cookies through your browser will prevent core features of WinVinaya MIS (such as staying logged in) from working correctly. You can find guidance for common browsers here:
 - Google Chrome: [Insert link]
 - Mozilla Firefox: [Insert link]
 - Safari: [Insert link]
@@ -111,13 +111,13 @@ We may update this Cookie Policy from time to time to reflect changes in the coo
 
 If you have questions about this Cookie Policy or how we use cookies, please contact us:
 
-**Taydens Pvt. Ltd.**\n
+**WinVinaya InfoSystems Pvt. Ltd.**\n
 Surampatti, Erode - 638009\n
-Email: privacy-policy@gravit.taydens.com
+Email: privacy-policy@WinVinaya MIS.WinVinaya InfoSystems.com
 
 ---
 
-*This Cookie Policy is designed to work alongside Gravit's Privacy Policy and Terms and Conditions, and reflects standard GDPR/ePrivacy consent practices. The cookie inventory tables above are structured to be filled in with your actual cookies once finalized (e.g. via a cookie audit/scan of the live site), and the completed document should be reviewed by legal counsel before publication.*
+*This Cookie Policy is designed to work alongside WinVinaya MIS's Privacy Policy and Terms and Conditions, and reflects standard GDPR/ePrivacy consent practices. The cookie inventory tables above are structured to be filled in with your actual cookies once finalized (e.g. via a cookie audit/scan of the live site), and the completed document should be reviewed by legal counsel before publication.*
 `;
 
 export default cookiePolicyContent;

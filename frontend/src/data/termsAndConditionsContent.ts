@@ -1,20 +1,20 @@
 // Raw markdown body rendered by TermsPage. Kept as data (not JSX) so the legal
 // text can be reviewed/edited on its own, separate from page layout code.
 const termsAndConditionsContent = `
-# Terms and Conditions — Gravit
+# Terms and Conditions — WinVinaya MIS
 
 **Effective Date:** 27th July 2026 \n
 **Last Updated:** 27th July 2026
 
 ---
 
-> **Note before publishing:** This is a detailed, industry-standard SaaS Terms of Service draft built around Gravit's actual product (CRM, Projects, Timesheets, HR & Payroll, Meeting Booking, and the IRIS AI agent) and its Solo/Team subscription model. Placeholders like \`[Insert ...]\` need your legal entity, jurisdiction, and commercial details filled in, and this document should be reviewed by qualified legal counsel before publication — standard practice for any binding commercial agreement.
+> **Note before publishing:** This is a detailed, industry-standard SaaS Terms of Service draft built around WinVinaya MIS's actual product (CRM, Projects, Timesheets, HR & Payroll, Meeting Booking, and the IRIS AI agent) and its Solo/Team subscription model. Placeholders like \`[Insert ...]\` need your legal entity, jurisdiction, and commercial details filled in, and this document should be reviewed by qualified legal counsel before publication — standard practice for any binding commercial agreement.
 
 ---
 
 ## 1. Agreement to Terms
 
-These Terms and Conditions ("**Terms**") form a binding legal agreement between you ("**you**," "**User**," or, where you're signing up on behalf of a business, "**Organization**") and **[Insert Legal Entity Name, e.g. Taydens Pvt. Ltd.]** ("**Taydens**," "**Gravit**," "**we**," "**us**," or "**our**"), governing your access to and use of the Gravit platform, including our website, application, and the IRIS AI agent (collectively, the "**Service**").
+These Terms and Conditions ("**Terms**") form a binding legal agreement between you ("**you**," "**User**," or, where you're signing up on behalf of a business, "**Organization**") and **[Insert Legal Entity Name, e.g. WinVinaya InfoSystems Pvt. Ltd.]** ("**WinVinaya InfoSystems**," "**WinVinaya MIS**," "**we**," "**us**," or "**our**"), governing your access to and use of the WinVinaya MIS platform, including our website, application, and the IRIS AI agent (collectively, the "**Service**").
 
 By creating an account, accessing, or using the Service, you agree to be bound by these Terms and by our [Privacy Policy], which is incorporated by reference. If you do not agree, you must not access or use the Service.
 
@@ -24,13 +24,13 @@ If you are entering into these Terms on behalf of a company or other legal entit
 
 ## 2. Eligibility
 
-You must be at least 18 years old and capable of forming a legally binding contract to use the Service. Gravit is a business tool intended for professional use and is not directed at or intended for use by minors.
+You must be at least 18 years old and capable of forming a legally binding contract to use the Service. WinVinaya MIS is a business tool intended for professional use and is not directed at or intended for use by minors.
 
 ---
 
 ## 3. Description of Service
 
-Gravit is a unified business operations platform that provides, subject to your subscription plan:
+WinVinaya MIS is a unified business operations platform that provides, subject to your subscription plan:
 
 - **CRM** — lead, deal, and company pipeline management
 - **Projects** — task and project management tools
@@ -56,7 +56,7 @@ We may add, modify, or discontinue features from time to time, as described in S
 ## 5. Subscription Plans, Billing, and Payment
 
 ### 5.1 Plans
-Gravit offers both **Solo** plans (for individual users) and **Team** plans (for multi-user Organizations), each with multiple tiers (e.g. Trial, Standard/Starter, Pro/Growth, Enterprise), as described on our [Pricing page]. Each tier includes specific feature access and a monthly AI action ("credit") allowance for IRIS, as set out at the time of purchase.
+WinVinaya MIS offers both **Solo** plans (for individual users) and **Team** plans (for multi-user Organizations), each with multiple tiers (e.g. Trial, Standard/Starter, Pro/Growth, Enterprise), as described on our [Pricing page]. Each tier includes specific feature access and a monthly AI action ("credit") allowance for IRIS, as set out at the time of purchase.
 
 ### 5.2 Free Trial
 We may offer a free trial period. At the end of the trial, your account will [automatically convert to a paid plan / require you to select a paid plan to continue — Insert actual behavior], unless you cancel before the trial ends.
@@ -103,7 +103,7 @@ We reserve the right to investigate and take appropriate action, including suspe
 
 ## 8. Your Data and Content
 
-- **Ownership.** As between you and Gravit, you (or your Organization) retain all ownership rights in the data you upload to or generate within the Service ("**Customer Data**"), including CRM records, HR data, project data, and files.
+- **Ownership.** As between you and WinVinaya MIS, you (or your Organization) retain all ownership rights in the data you upload to or generate within the Service ("**Customer Data**"), including CRM records, HR data, project data, and files.
 - **License to us.** You grant us a limited, non-exclusive license to host, process, and transmit your Customer Data solely as necessary to provide the Service to you, in accordance with our [Privacy Policy].
 - **No AI training on your data.** We do not use your Customer Data to train any AI model, ours or any third-party provider's. IRIS processes your data only to generate the specific response or action you request, as described in our Privacy Policy.
 - **Your responsibility.** You are solely responsible for the accuracy, legality, and appropriateness of the data you or your users upload to the Service, and for ensuring you have the necessary rights and consents to process that data (particularly personal data relating to your employees, leads, or clients).
@@ -113,7 +113,7 @@ We reserve the right to investigate and take appropriate action, including suspe
 
 ## 9. Intellectual Property
 
-- The Service, including its software, design, branding, and underlying technology (excluding your Customer Data), is owned by Taydens or our licensors and is protected by intellectual property laws.
+- The Service, including its software, design, branding, and underlying technology (excluding your Customer Data), is owned by WinVinaya InfoSystems or our licensors and is protected by intellectual property laws.
 - Subject to your compliance with these Terms, we grant you a limited, non-exclusive, non-transferable, revocable license to access and use the Service for your internal business purposes during your subscription term.
 - You may not copy, modify, distribute, sell, or lease any part of the Service, nor attempt to extract its source code, except as permitted by applicable law.
 - Any feedback or suggestions you provide about the Service may be used by us without obligation to you.
@@ -138,7 +138,7 @@ Each party agrees to protect the other's confidential information (including Cus
 The Service is provided **"as is" and "as available,"** without warranties of any kind, express or implied, including but not limited to warranties of merchantability, fitness for a particular purpose, or non-infringement, except as expressly stated in these Terms or required by applicable law.
 
 ### 12.2 Limitation of Liability
-To the maximum extent permitted by applicable law, Taydens' total liability arising out of or relating to these Terms or the Service will not exceed the total fees paid by you to us in the [Insert period, e.g. 12 months] preceding the event giving rise to the claim. Taydens will not be liable for indirect, incidental, special, consequential, or punitive damages, including loss of profits, data, or business opportunity, even if advised of the possibility of such damages.
+To the maximum extent permitted by applicable law, WinVinaya InfoSystems' total liability arising out of or relating to these Terms or the Service will not exceed the total fees paid by you to us in the [Insert period, e.g. 12 months] preceding the event giving rise to the claim. WinVinaya InfoSystems will not be liable for indirect, incidental, special, consequential, or punitive damages, including loss of profits, data, or business opportunity, even if advised of the possibility of such damages.
 
 ### 12.3 Exceptions
 Nothing in these Terms limits or excludes liability that cannot be limited or excluded under applicable law, including liability for fraud, gross negligence, or death or personal injury caused by our negligence.
@@ -155,7 +155,7 @@ We may modify, update, or discontinue features of the Service at our discretion,
 
 - These Terms remain in effect for as long as you maintain an account or actively use the Service.
 - You may cancel your subscription at any time through your account settings; cancellation will take effect at the end of your current billing cycle unless otherwise stated.
-- We may suspend or terminate your access to the Service, with or without notice, if you materially breach these Terms, fail to pay applicable fees, or engage in conduct that we reasonably believe harms Gravit, other users, or third parties.
+- We may suspend or terminate your access to the Service, with or without notice, if you materially breach these Terms, fail to pay applicable fees, or engage in conduct that we reasonably believe harms WinVinaya MIS, other users, or third parties.
 - Upon termination, your right to access the Service ends, and we will handle your Customer Data in accordance with the retention and deletion terms in our Privacy Policy.
 - Sections that by their nature should survive termination (including Sections 8, 9, 11, 12, and 16) will survive.
 
@@ -163,7 +163,7 @@ We may modify, update, or discontinue features of the Service at our discretion,
 
 ## 15. Indemnification
 
-You agree to indemnify and hold Taydens harmless from any claims, damages, liabilities, and expenses (including reasonable legal fees) arising from your breach of these Terms, your misuse of the Service, or your violation of any law or third-party right, including in relation to Customer Data you upload.
+You agree to indemnify and hold WinVinaya InfoSystems harmless from any claims, damages, liabilities, and expenses (including reasonable legal fees) arising from your breach of these Terms, your misuse of the Service, or your violation of any law or third-party right, including in relation to Customer Data you upload.
 
 ---
 
@@ -181,7 +181,7 @@ We may update these Terms from time to time to reflect changes in our Service, l
 
 ## 18. General Provisions
 
-- **Entire Agreement.** These Terms, together with our Privacy Policy and any order form or enterprise agreement you've signed, constitute the entire agreement between you and Taydens regarding the Service.
+- **Entire Agreement.** These Terms, together with our Privacy Policy and any order form or enterprise agreement you've signed, constitute the entire agreement between you and WinVinaya InfoSystems regarding the Service.
 - **Severability.** If any provision of these Terms is found unenforceable, the remaining provisions will remain in full effect.
 - **No Waiver.** Our failure to enforce any provision of these Terms is not a waiver of our right to do so later.
 - **Assignment.** You may not assign these Terms without our prior written consent. We may assign these Terms in connection with a merger, acquisition, or sale of assets.
@@ -193,13 +193,13 @@ We may update these Terms from time to time to reflect changes in our Service, l
 
 If you have questions about these Terms, please contact us:
 
-**Taydens Pvt. Ltd.**\n
+**WinVinaya InfoSystems Pvt. Ltd.**\n
 Surampatti, Erode - 638009\n
-Email: privacy-policy@gravit.taydens.com
+Email: privacy-policy@WinVinaya MIS.WinVinaya InfoSystems.com
 
 ---
 
-*These Terms and Conditions are designed to reflect industry-standard SaaS agreement practices, tailored to Gravit's actual product and subscription model. They should be reviewed by qualified legal counsel before publication to ensure full compliance with the laws of your operating jurisdiction(s) and to finalize commercial terms (billing cycle, refund policy, SLA, governing law) specific to your business.*
+*These Terms and Conditions are designed to reflect industry-standard SaaS agreement practices, tailored to WinVinaya MIS's actual product and subscription model. They should be reviewed by qualified legal counsel before publication to ensure full compliance with the laws of your operating jurisdiction(s) and to finalize commercial terms (billing cycle, refund policy, SLA, governing law) specific to your business.*
 `;
 
 export default termsAndConditionsContent;

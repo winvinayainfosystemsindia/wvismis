@@ -30,6 +30,7 @@ const Footer: React.FC = () => {
 				})}
 			>
 				Copyright © {new Date().getFullYear()}{' '}
+				<strong>WinVinaya MIS</strong>. Designed & Powered by{' '}
 				<Link
 					href="https://winvinayainfosystems.com/"
 					target="_blank"
@@ -44,7 +45,7 @@ const Footer: React.FC = () => {
 							textDecoration: 'underline'
 						}
 					}}
-				>WinVinaya Infosystems</Link>
+				>WinVinaya InfoSystems</Link>
 				. All rights reserved.
 			</Typography>
 

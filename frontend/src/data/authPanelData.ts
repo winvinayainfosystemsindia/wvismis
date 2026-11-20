@@ -99,7 +99,7 @@ export const authPanelContent: Record<AuthBrandVariant, AuthPanelCopy> = {
 	register: {
 		title: 'Run your entire business from one workspace.',
 		description:
-			'Gravit brings CRM, HR, payroll, projects and timesheets together, so growing teams stop switching between tools.',
+			'WinVinaya MIS brings projects, teams, operations and reports together in one unified management information system, designed & powered by WinVinaya InfoSystems.',
 		features: registerFeatures,
 	},
 	login: {

@@ -525,36 +525,49 @@ const Sidebar: React.FC = () => {
 				>
 					{drawerExpanded ? (
 						<Box
-							component="img"
-							src={isDarkSidebar ? '/assets/img/logo/gravit-dark.svg' : '/assets/img/logo/gravit-light.svg'}
-							alt="Gravit logo"
-							sx={{
-								height: 62, // Enlarged logo
-								cursor: 'pointer'
-							}}
 							onClick={() => navigate('/')}
-						/>
+							sx={{
+								display: 'flex',
+								alignItems: 'center',
+								cursor: 'pointer',
+								maxWidth: '100%',
+								py: 0.5,
+							}}
+						>
+							<Box
+								component="img"
+								src={isDarkSidebar ? "/assets/img/logo/winvinaya-logo-dark.svg" : "/assets/img/logo/winvinaya-logo-light.svg"}
+								alt="WinVinaya MIS"
+								sx={{
+									height: 42,
+									maxWidth: 210,
+									objectFit: 'contain',
+								}}
+							/>
+						</Box>
 					) : (
 						<Box
 							onClick={() => navigate('/')}
 							sx={{
-								width: 36,
-								height: 36,
+								width: 40,
+								height: 40,
 								borderRadius: theme.layout.radius.button,
-								background: theme.gradients.brandDiagonal,
 								display: 'flex',
 								alignItems: 'center',
 								justifyContent: 'center',
 								cursor: 'pointer',
-								boxShadow: `0 2px 8px ${alpha(theme.palette.primary.main, 0.3)}`,
 							}}
 						>
-							<svg width="22" height="22" viewBox="-75 -80 150 155" xmlns="http://www.w3.org/2000/svg">
-								<g>
-									<path d="M 36 -54 A 65 65 0 1 0 65 12 L 18 12" fill="none" stroke={theme.palette.primary.contrastText} strokeWidth="13" strokeLinecap="round"/>
-									<circle cx="58" cy="-66" r="10" fill={theme.palette.primary.contrastText}/>
-								</g>
-							</svg>
+							<Box
+								component="img"
+								src="/assets/img/logo/winvinaya-icon.svg"
+								alt="WinVinaya MIS"
+								sx={{
+									width: 32,
+									height: 32,
+									objectFit: 'contain',
+								}}
+							/>
 						</Box>
 					)}
 				</Box>
@@ -812,6 +825,24 @@ const Sidebar: React.FC = () => {
 									}
 								]}
 							/>
+							{drawerExpanded && (
+								<Typography
+									variant="caption"
+									sx={{
+										display: 'block',
+										textAlign: 'center',
+										fontSize: '0.66rem',
+										color: sidebarTextMuted,
+										opacity: 0.8,
+										pt: 1,
+										pb: 0.25,
+										lineHeight: 1.25,
+									}}
+								>
+									Designed & Powered by<br />
+									<strong>WinVinaya InfoSystems</strong>
+								</Typography>
+							)}
 						</Box>
 					)
 				)}

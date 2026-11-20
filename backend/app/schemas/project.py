@@ -1,4 +1,4 @@
-"""Pydantic validation schemas for the Gravit Project Management module"""
+"""Pydantic validation schemas for the WinVinaya MIS Project Management module"""
 
 import uuid
 from datetime import datetime, date

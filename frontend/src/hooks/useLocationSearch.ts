@@ -26,7 +26,7 @@ export const useLocationSearch = () => {
 					)}&format=json&addressdetails=1&limit=5&accept-language=en`,
 					{
 						headers: {
-							'User-Agent': 'Gravit-Onboarding-App/1.0',
+							'User-Agent': 'WinVinaya-MIS-App/1.0',
 						},
 					}
 				);

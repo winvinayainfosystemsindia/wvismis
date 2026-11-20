@@ -4,8 +4,8 @@ import privacyPolicyContent from '../../data/privacyPolicyContent';
 
 const PrivacyPolicyPage: React.FC = () => (
 	<LegalPageLayout
-		pageTitle="Privacy Policy | Gravit"
-		metaDescription="How Gravit collects, uses, stores, and protects personal data across CRM, Projects, Timesheets, HR & Payroll, Booking, and the IRIS AI agent."
+		pageTitle="Privacy Policy | WinVinaya MIS"
+		metaDescription="How WinVinaya MIS collects, uses, stores, and protects personal data, designed & powered by WinVinaya InfoSystems."
 		content={privacyPolicyContent}
 	/>
 );

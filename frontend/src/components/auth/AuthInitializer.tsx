@@ -37,7 +37,7 @@ const AuthInitializer: React.FC<AuthInitializerProps> = ({ children }) => {
             <Spinner
                 fullPage
                 size={96}
-                text="Initializing Gravit"
+                text="Initializing WinVinaya MIS"
             />
         );
     }

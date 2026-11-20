@@ -21,12 +21,10 @@ import {
 	VisibilityOff,
 } from '@mui/icons-material';
 import authService from '../../../services/authService';
-import { useColorMode } from '../../../theme/ThemeContext';
 
 const ResetPassword: React.FC = () => {
 	const theme = useTheme();
 	const navigate = useNavigate();
-	const { mode } = useColorMode();
 	const [searchParams] = useSearchParams();
 	const token = searchParams.get('token');
 
@@ -82,9 +80,9 @@ const ResetPassword: React.FC = () => {
 				<Box sx={{ mb: 4, textAlign: 'center' }}>
 					<Box
 						component="img"
-						src={mode === 'dark' ? '/assets/img/logo/gravit-dark.svg' : '/assets/img/logo/gravit-light.svg'}
-						alt="Gravit Logo"
-						sx={{ height: 48, mb: 1.5 }}
+						src="/assets/img/logo/winvinaya-logo-dark.svg"
+						alt="WinVinaya MIS"
+						sx={{ height: 48, mb: 1.5, objectFit: 'contain' }}
 					/>
 				</Box>
 

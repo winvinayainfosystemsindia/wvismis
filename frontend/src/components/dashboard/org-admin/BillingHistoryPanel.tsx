@@ -25,7 +25,7 @@ export const BillingHistoryPanel: React.FC = () => {
 	const downloadInvoice = () => {
 		const element = document.createElement("a");
 		const invoiceContent = `=========================================
-          GRAVIT CRM INVOICE
+          WINVINAYA MIS INVOICE
 =========================================
 Invoice ID: INV-2026-${new Date().getMonth() + 1}
 Billing Period: ${currentMonthName}

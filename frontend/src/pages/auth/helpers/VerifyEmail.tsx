@@ -76,9 +76,9 @@ const VerifyEmail: React.FC = () => {
 									{/* Logo shown here only on mobile, where the brand panel is hidden */}
 									<Box
 										component="img"
-										src="/assets/img/logo/gravit-dark.svg"
-										alt="Gravit"
-										sx={{ display: { xs: 'block', md: 'none' }, height: 36, mx: 'auto', mb: 4 }}
+										src="/assets/img/logo/winvinaya-logo-dark.svg"
+										alt="WinVinaya MIS"
+										sx={{ display: { xs: 'block', md: 'none' }, height: 42, mx: 'auto', mb: 4, objectFit: 'contain' }}
 									/>
 
 									{verified ? (

@@ -243,6 +243,35 @@ const timesheetService = {
 	getIrisActivity: async (): Promise<IrisActivityEntry[]> => {
 		const response = await api.get<IrisActivityEntry[]>('/timesheets/iris/activity');
 		return response.data;
+	},
+
+	// ==========================================
+	// 8. REPORTING MANAGERS
+	// ==========================================
+	listAvailableManagers: async (): Promise<Array<{
+		id: number;
+		public_id: string;
+		email: string;
+		username: string;
+		full_name: string;
+		role: string;
+		direct_reports_count: number;
+	}>> => {
+		const response = await api.get('/timesheets/managers');
+		return response.data;
+	},
+
+	assignReportingManager: async (userRef: string | number, reportingManagerId: number | null): Promise<{
+		success: boolean;
+		message: string;
+		user_id: number;
+		public_id: string;
+		reporting_manager_id: number | null;
+	}> => {
+		const response = await api.put(`/timesheets/users/${userRef}/reporting-manager`, {
+			reporting_manager_id: reportingManagerId
+		});
+		return response.data;
 	}
 };
 

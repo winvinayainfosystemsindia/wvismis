@@ -20,6 +20,8 @@ class UserBase(BaseModel):
     department: Optional[str] = Field(None, max_length=100)
     designation: Optional[str] = Field(None, max_length=100)
     avatar_url: Optional[str] = Field(None, max_length=500)
+    reporting_manager_id: Optional[int] = Field(None, description="Reporting Manager user ID")
+    timezone: Optional[str] = Field(None, max_length=100)
 
 
 class UserCreate(UserBase):
@@ -64,6 +66,8 @@ class UserUpdate(BaseModel):
     department: Optional[str] = Field(None, max_length=100)
     designation: Optional[str] = Field(None, max_length=100)
     avatar_url: Optional[str] = Field(None, max_length=500)
+    reporting_manager_id: Optional[int] = Field(None, description="Reporting Manager user ID")
+    timezone: Optional[str] = Field(None, max_length=100)
     organization_id: Optional[int] = None
 
 

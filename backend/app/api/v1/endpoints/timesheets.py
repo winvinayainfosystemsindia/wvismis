@@ -1,6 +1,7 @@
 import uuid
 from datetime import date, timedelta, datetime
 from typing import Optional, List
+from pydantic import BaseModel, Field
 from fastapi import APIRouter, Depends, Query, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, func
@@ -32,6 +33,12 @@ from app.schemas.audit import AuditLogResponse
 
 router = APIRouter(prefix="/timesheets", tags=["timesheets"])
 router_holidays = APIRouter(prefix="/holidays", tags=["holidays"])
+
+ADMIN_ROLES = [UserRole.SUPER_ADMIN, UserRole.ORG_ADMIN, UserRole.ADMIN]
+MANAGER_OR_ADMIN_ROLES = [UserRole.SUPER_ADMIN, UserRole.ORG_ADMIN, UserRole.ADMIN, UserRole.MANAGER]
+
+def is_admin(user: User) -> bool:
+    return bool(user.is_superuser or user.role in ADMIN_ROLES)
 
 
 # ==========================================
@@ -145,7 +152,7 @@ async def list_holidays(
 async def create_holiday(
     payload: OrgHolidayCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_roles([UserRole.ADMIN]))
+    current_user: User = Depends(require_roles(ADMIN_ROLES))
 ):
     """Add a new holiday to the organization calendar (Admin only)."""
     holiday = await OrgHolidayRepository.create(
@@ -165,7 +172,7 @@ async def update_holiday(
     holiday_id: int,
     payload: OrgHolidayUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_roles([UserRole.ADMIN]))
+    current_user: User = Depends(require_roles(ADMIN_ROLES))
 ):
     """Edit an existing holiday (Admin only)."""
     holiday = await OrgHolidayRepository.get_by_id(db, holiday_id)
@@ -181,7 +188,7 @@ async def update_holiday(
 async def delete_holiday(
     holiday_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_roles([UserRole.ADMIN]))
+    current_user: User = Depends(require_roles(ADMIN_ROLES))
 ):
     """Delete a holiday (Admin only)."""
     holiday = await OrgHolidayRepository.get_by_id(db, holiday_id)
@@ -216,7 +223,7 @@ async def get_user_timesheet_settings(
     current_user: User = Depends(get_current_user)
 ):
     """Retrieve timesheet settings for a user."""
-    if current_user.id != user_id and current_user.role not in [UserRole.ADMIN, UserRole.MANAGER]:
+    if current_user.id != user_id and not (is_admin(current_user) or current_user.role == UserRole.MANAGER):
         raise ForbiddenError("You cannot view settings for other users")
         
     settings = await TimesheetUserSettingsRepository.get_by_user(
@@ -231,7 +238,7 @@ async def update_user_timesheet_settings(
     user_id: int,
     payload: TimesheetUserSettingsUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_roles([UserRole.ADMIN, UserRole.MANAGER]))
+    current_user: User = Depends(require_roles(MANAGER_OR_ADMIN_ROLES))
 ):
     """Update timesheet settings for a user (e.g. grant holiday logging override) (Admin/Manager only)."""
     settings = await TimesheetUserSettingsRepository.get_by_user(
@@ -331,7 +338,7 @@ async def get_team_logs(
     project_id: Optional[int] = Query(None),
     status: Optional[TimesheetStatus] = Query(None),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_roles([UserRole.ADMIN, UserRole.MANAGER]))
+    current_user: User = Depends(require_roles(MANAGER_OR_ADMIN_ROLES))
 ):
     """Retrieve submitted timesheet entries for approval. A MANAGER only sees their own
     direct reports' entries; an ADMIN sees every entry in the org (the escalation tier --
@@ -343,7 +350,7 @@ async def get_team_logs(
         ProjectTimeLog.is_deleted.is_(False)
     ]
 
-    if current_user.role != UserRole.ADMIN:
+    if not is_admin(current_user):
         stmt_reports = select(User.id).where(User.reporting_manager_id == current_user.id)
         report_ids_res = await db.execute(stmt_reports)
         report_ids = [r[0] for r in report_ids_res.all()]
@@ -374,7 +381,7 @@ async def get_team_logs(
 async def bulk_approve_team_week(
     payload: TimesheetBulkApproveRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_roles([UserRole.ADMIN, UserRole.MANAGER]))
+    current_user: User = Depends(require_roles(MANAGER_OR_ADMIN_ROLES))
 ):
     """Approve one week for several team members in a single call -- the manager-facing
     equivalent of ticking several rows and hitting Approve once, instead of one request
@@ -390,7 +397,7 @@ async def bulk_approve_team_week(
 @router.get("/team/settings", response_model=List[TimesheetTeamSettingsRow])
 async def get_team_timesheet_settings(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_roles([UserRole.ADMIN, UserRole.MANAGER]))
+    current_user: User = Depends(require_roles(MANAGER_OR_ADMIN_ROLES))
 ):
     """Per-person timesheet settings (weekly hour target, holiday-logging override) for
     everyone this user manages -- their direct reports, or org-wide for an ADMIN --
@@ -404,7 +411,7 @@ async def approve_user_week(
     target_user_id: int,
     payload: TimesheetSubmitWeekRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_roles([UserRole.ADMIN, UserRole.MANAGER]))
+    current_user: User = Depends(require_roles(MANAGER_OR_ADMIN_ROLES))
 ):
     """Approve a user's submitted logs for a week. Authorized for that user's direct
     reporting manager, or any org ADMIN as the escalation tier."""
@@ -426,7 +433,7 @@ async def reject_user_week(
     date_range: TimesheetSubmitWeekRequest,
     payload: TimesheetApproveRejectRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_roles([UserRole.ADMIN, UserRole.MANAGER]))
+    current_user: User = Depends(require_roles(MANAGER_OR_ADMIN_ROLES))
 ):
     """Reject a user's submitted logs for a week with a reason. Authorized for that
     user's direct reporting manager, or any org ADMIN as the escalation tier."""
@@ -451,7 +458,7 @@ async def unapprove_user_week(
     target_user_id: int,
     payload: TimesheetSubmitWeekRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_roles([UserRole.ADMIN, UserRole.MANAGER]))
+    current_user: User = Depends(require_roles(MANAGER_OR_ADMIN_ROLES))
 ):
     """Revoke a wrongly submitted or approved week back to draft, so the employee can
     fix and resubmit it. Authorized for that user's direct reporting manager, or any
@@ -512,12 +519,12 @@ async def my_week_unlock_requests(
 @router.get("/week-unlock-requests/team", response_model=List[TimesheetWeekUnlockRequestResponse])
 async def team_week_unlock_requests(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_roles([UserRole.ADMIN, UserRole.MANAGER]))
+    current_user: User = Depends(require_roles(MANAGER_OR_ADMIN_ROLES))
 ):
     """Requests routed to this manager -- their own direct reports only, or every
     request org-wide for an ADMIN (the escalation tier)."""
     return await TimesheetWeekUnlockRequestRepository.list_for_manager(
-        db, current_user.organization_id, current_user.id, org_wide=current_user.role == UserRole.ADMIN,
+        db, current_user.organization_id, current_user.id, org_wide=is_admin(current_user),
     )
 
 @router.post("/week-unlock-requests/{request_id}/approve", response_model=TimesheetWeekUnlockRequestResponse)
@@ -525,7 +532,7 @@ async def approve_week_unlock(
     request_id: int,
     payload: TimesheetWeekUnlockResolve,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_roles([UserRole.ADMIN, UserRole.MANAGER]))
+    current_user: User = Depends(require_roles(MANAGER_OR_ADMIN_ROLES))
 ):
     """Grant a pending unlock request -- the employee can then edit/submit that week once.
     Authorized for that user's direct reporting manager, or any org ADMIN as the
@@ -553,7 +560,7 @@ async def deny_week_unlock(
     request_id: int,
     payload: TimesheetWeekUnlockResolve,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_roles([UserRole.ADMIN, UserRole.MANAGER]))
+    current_user: User = Depends(require_roles(MANAGER_OR_ADMIN_ROLES))
 ):
     """Deny a pending unlock request. Authorized for that user's direct reporting
     manager, or any org ADMIN as the escalation tier."""
@@ -602,7 +609,7 @@ async def get_timesheet_report(
     if billing_type:
         conditions.append(ProjectTimeLog.billing_type == billing_type)
 
-    if current_user.role == UserRole.ADMIN:
+    if is_admin(current_user):
         if user_id:
             conditions.append(ProjectTimeLog.user_id == user_id)
     elif current_user.role == UserRole.MANAGER:
@@ -760,3 +767,107 @@ async def get_timesheet_iris_activity(
 
     items, _total = await AuditService.list_for_entity(db, entity_type="timesheet_iris", entity_id=current_user.id, page=1, page_size=5)
     return items
+
+
+# ==========================================
+# 7. REPORTING MANAGER ASSIGNMENT ENDPOINTS
+# ==========================================
+
+class AssignReportingManagerRequest(BaseModel):
+    reporting_manager_id: Optional[int] = Field(None, description="Target reporting manager user ID (or null to unassign)")
+
+
+@router.get("/managers", summary="List available reporting managers in organization")
+async def list_available_managers(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Retrieve list of potential managers and administrators within the organization."""
+    stmt = (
+        select(User)
+        .where(
+            User.organization_id == current_user.organization_id,
+            User.is_active.is_(True),
+            User.is_deleted.is_(False),
+            User.role.in_(MANAGER_OR_ADMIN_ROLES),
+        )
+        .order_by(User.full_name, User.username)
+    )
+    result = await db.execute(stmt)
+    managers = list(result.scalars().all())
+
+    counts_stmt = (
+        select(User.reporting_manager_id, func.count(User.id))
+        .where(
+            User.organization_id == current_user.organization_id,
+            User.is_deleted.is_(False),
+            User.reporting_manager_id.isnot(None),
+        )
+        .group_by(User.reporting_manager_id)
+    )
+    counts_res = await db.execute(counts_stmt)
+    counts_map = dict(counts_res.all())
+
+    return [
+        {
+            "id": m.id,
+            "public_id": str(m.public_id),
+            "email": m.email,
+            "username": m.username,
+            "full_name": m.full_name or m.username,
+            "role": m.role.value if hasattr(m.role, "value") else str(m.role),
+            "direct_reports_count": counts_map.get(m.id, 0),
+        }
+        for m in managers
+    ]
+
+
+@router.put("/users/{user_ref}/reporting-manager", summary="Assign or update reporting manager for a user")
+async def assign_reporting_manager(
+    user_ref: str,
+    payload: AssignReportingManagerRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Assign or update a user's reporting manager.
+    Admins can assign for anyone in the organization.
+    Regular users can set/update their own reporting manager if not already set or permitted.
+    """
+    from app.services.user_service import UserService
+    from app.schemas.user import UserUpdate
+
+    user_service = UserService(db)
+    if user_ref == "me" or str(current_user.id) == user_ref or str(current_user.public_id) == user_ref:
+        target_user = current_user
+    else:
+        if not is_admin(current_user):
+            raise ForbiddenError("Only organization administrators can reassign reporting managers for other users.")
+        if user_ref.isdigit():
+            target_user = await user_service.get_user(int(user_ref), organization_id=current_user.organization_id)
+        else:
+            try:
+                target_uuid = uuid.UUID(user_ref)
+                target_user = await UserRepository.get_by_public_id(db, target_uuid)
+                if not target_user or target_user.organization_id != current_user.organization_id:
+                    raise NotFoundError("User not found.")
+            except ValueError:
+                raise BadRequestError("Invalid user identifier.")
+
+    if not target_user:
+        raise NotFoundError("User not found.")
+
+    updated_user = await user_service.update_user(
+        target_user.id,
+        UserUpdate(reporting_manager_id=payload.reporting_manager_id),
+        organization_id=current_user.organization_id if not current_user.is_superuser else None,
+    )
+    await db.commit()
+    await db.refresh(updated_user)
+
+    return {
+        "success": True,
+        "message": "Reporting manager assigned successfully.",
+        "user_id": updated_user.id,
+        "public_id": str(updated_user.public_id),
+        "reporting_manager_id": updated_user.reporting_manager_id,
+    }

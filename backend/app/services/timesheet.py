@@ -91,14 +91,19 @@ class TimesheetLockService:
         )
 
 
+def is_admin_user(user: "User") -> bool:
+    """Check if the user has administrative privileges (Admin, Org Admin, Super Admin)."""
+    from app.models.user import UserRole
+    return bool(user.is_superuser or user.role in (UserRole.ADMIN, UserRole.ORG_ADMIN, UserRole.SUPER_ADMIN))
+
+
 def can_manage_timesheet_for(current_user: "User", target_user: "User") -> bool:
     """Two-tier approval authorization: a user's direct reporting manager is always
     authorized, and an org ADMIN is authorized for every user org-wide as a fallback/
     escalation tier -- covering the case where the direct manager is unavailable, or
     where a user (e.g. a manager themselves) has no reporting_manager_id set at all.
     Managers still only ever see/act on their own direct reports."""
-    from app.models.user import UserRole
-    return target_user.reporting_manager_id == current_user.id or current_user.role == UserRole.ADMIN
+    return target_user.reporting_manager_id == current_user.id or is_admin_user(current_user)
 
 
 class TimesheetService:
@@ -150,7 +155,7 @@ class TimesheetService:
         so the team-approvals UI can flag overtime without an N+1 settings fetch."""
         from app.models.user import User, UserRole
 
-        if current_user.role == UserRole.ADMIN:
+        if is_admin_user(current_user):
             result = await db.execute(
                 select(User).where(User.organization_id == current_user.organization_id, User.is_deleted.is_(False))
             )

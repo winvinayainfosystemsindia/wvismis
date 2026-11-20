@@ -179,6 +179,53 @@ class UserService:
                 )
             update_data["username"] = new_username
 
+        if "reporting_manager_id" in update_data:
+            new_mgr_id = update_data["reporting_manager_id"]
+            if new_mgr_id and new_mgr_id > 0:
+                if new_mgr_id == user.id:
+                    # Self-reporting check
+                    from sqlalchemy import select
+                    stmt_other = select(User).where(
+                        User.organization_id == user.organization_id,
+                        User.id != user.id,
+                        User.role.in_([UserRole.ADMIN, UserRole.ORG_ADMIN, UserRole.SUPER_ADMIN, UserRole.MANAGER]),
+                        User.is_active == True,
+                        User.is_deleted == False
+                    )
+                    other_res = await self.db.execute(stmt_other)
+                    other_managers = other_res.scalars().all()
+                    if other_managers:
+                        raise HTTPException(
+                            status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="A user cannot be their own reporting manager when other managers/admins exist.",
+                        )
+                else:
+                    mgr = await self.repository.get(new_mgr_id, organization_id=user.organization_id)
+                    if not mgr:
+                        raise HTTPException(
+                            status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="The selected reporting manager does not exist or does not belong to your organization.",
+                        )
+                    # Circular reporting detection
+                    visited = set()
+                    curr_id = new_mgr_id
+                    while curr_id is not None:
+                        if curr_id == user.id:
+                            raise HTTPException(
+                                status_code=status.HTTP_400_BAD_REQUEST,
+                                detail="Circular reporting structure detected. This assignment is invalid.",
+                            )
+                        if curr_id in visited:
+                            break
+                        visited.add(curr_id)
+                        mgr_user = await self.repository.get(curr_id)
+                        if not mgr_user:
+                            break
+                        curr_id = mgr_user.reporting_manager_id
+                update_data["reporting_manager_id"] = new_mgr_id
+            else:
+                update_data["reporting_manager_id"] = None
+
         updated_user = await self.repository.update(user_id, update_data)
         return updated_user
 

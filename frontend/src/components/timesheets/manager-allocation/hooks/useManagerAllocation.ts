@@ -32,7 +32,7 @@ export const useManagerAllocation = () => {
 
 		const adminOrManagerEmails = new Set(
 			allUsers
-				.filter((u) => u.role === 'admin' || u.role === 'manager')
+				.filter((u) => ['admin', 'manager', 'org_admin', 'super_admin'].includes(u.role?.toLowerCase()))
 				.map((u) => u.email)
 		);
 

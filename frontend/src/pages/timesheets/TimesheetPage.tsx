@@ -60,6 +60,7 @@ import ManagerAllocationPanel from '../../components/timesheets/manager-allocati
 import HolidayCalendarPanel from '../../components/timesheets/holiday-calendar';
 import WeekUnlockRequestsPanel from '../../components/timesheets/week-unlock-requests';
 import IrisTimesheetPanel from '../../components/timesheets/IrisTimesheetPanel';
+import { AssignReportingManagerDialog } from '../../components/timesheets/shared';
 import useToast from '../../hooks/useToast';
 import type { ProjectTimeLog } from '../../models/timesheet';
 
@@ -190,7 +191,13 @@ const TimesheetPage: React.FC = () => {
 		userSettings, teamSettings
 	} = useAppSelector((state) => state.timesheets);
 
-	const isAdmin = currentUser?.role === 'admin';
+	const isAdmin = Boolean(
+		currentUser?.is_superuser ||
+		currentUser?.role === 'admin' ||
+		currentUser?.role === 'org_admin' ||
+		currentUser?.role === 'super_admin' ||
+		(currentUser?.role as string) === 'owner'
+	);
 	const isManagerOrAdmin = isAdmin || currentUser?.role === 'manager';
 	const hasReportingManager = currentUser?.reporting_manager_id != null;
 
@@ -201,7 +208,7 @@ const TimesheetPage: React.FC = () => {
 	const [guideOpen, setGuideOpen] = useState(false);
 	const [irisOpen, setIrisOpen] = useState(false);
 	const [showBanner, setShowBanner] = useState(() => {
-		return currentUser?.role === 'admin' && !localStorage.getItem('dismissed_timesheet_onboarding');
+		return isAdmin && !localStorage.getItem('dismissed_timesheet_onboarding');
 	});
 
 	const tabIcons: Record<string, SvgIconComponent> = {
@@ -219,13 +226,13 @@ const TimesheetPage: React.FC = () => {
 			labels.push('Team Approvals');
 			labels.push('Unlock Requests');
 		}
-		if (currentUser?.role === 'admin') {
+		if (isAdmin) {
 			labels.push('Manager Allocation');
 			labels.push('Holiday List');
 		}
 		labels.push('Reports');
 		return labels;
-	}, [isManagerOrAdmin, currentUser?.role]);
+	}, [isManagerOrAdmin, isAdmin]);
 
 	useEffect(() => {
 		if (activeTab >= tabLabels.length) {
@@ -235,6 +242,7 @@ const TimesheetPage: React.FC = () => {
 
 	// Dialog States
 	const [entryDialogOpen, setEntryDialogOpen] = useState(false);
+	const [assignManagerOpen, setAssignManagerOpen] = useState(false);
 	const [selectedLog, setSelectedLog] = useState<ProjectTimeLog | undefined>(undefined);
 	const [selectedCellDate, setSelectedCellDate] = useState<string | undefined>(undefined);
 
@@ -471,6 +479,15 @@ const TimesheetPage: React.FC = () => {
 			<Button
 				size="small"
 				variant="outlined"
+				startIcon={<ManagerAllocationIcon fontSize="small" />}
+				onClick={() => setAssignManagerOpen(true)}
+				sx={{ borderRadius: '10px', fontWeight: 700, textTransform: 'none' }}
+			>
+				{hasReportingManager ? 'Reporting Manager' : 'Assign Manager'}
+			</Button>
+			<Button
+				size="small"
+				variant="outlined"
 				startIcon={<IrisIcon fontSize="small" />}
 				onClick={() => setIrisOpen(true)}
 				sx={{ borderRadius: '10px', fontWeight: 700, textTransform: 'none' }}
@@ -580,6 +597,7 @@ const TimesheetPage: React.FC = () => {
 						unlockRequestLoading={unlockRequestMutating}
 						canLogOnHolidays={userSettings?.can_log_on_holidays ?? false}
 						weeklyHoursTarget={userSettings?.weekly_hours_target}
+						onAssignReportingManager={() => setAssignManagerOpen(true)}
 					/>
 				</Stack>
 			)}
@@ -590,7 +608,17 @@ const TimesheetPage: React.FC = () => {
 			{tabLabels[activeTab] === 'Team Approvals' && isManagerOrAdmin && (
 				<Grid container spacing={3} alignItems="stretch">
 					<Grid size={{ xs: 12, md: 3 }}>
-						<ReportingEmployeesPanel members={myDirectReports} />
+						<ReportingEmployeesPanel
+							members={myDirectReports}
+							onManageAllocation={
+								isAdmin
+									? () => {
+											const idx = tabLabels.indexOf('Manager Allocation');
+											if (idx !== -1) setActiveTab(idx);
+									  }
+									: undefined
+							}
+						/>
 					</Grid>
 					<Grid size={{ xs: 12, md: 9 }}>
 						<TeamTimesheetTable
@@ -625,10 +653,10 @@ const TimesheetPage: React.FC = () => {
 			{tabLabels[activeTab] === 'Reports' && isManagerOrAdmin && <TimesheetReportPanel />}
 
 			{/* Manager Allocation Panel */}
-			{tabLabels[activeTab] === 'Manager Allocation' && currentUser?.role === 'admin' && <ManagerAllocationPanel />}
+			{tabLabels[activeTab] === 'Manager Allocation' && isAdmin && <ManagerAllocationPanel />}
 
 			{/* Holiday List Panel */}
-			{tabLabels[activeTab] === 'Holiday List' && currentUser?.role === 'admin' && <HolidayCalendarPanel />}
+			{tabLabels[activeTab] === 'Holiday List' && isAdmin && <HolidayCalendarPanel />}
 
 			{/* Time Entry Form Modal */}
 			<TimeLogEntryFormDialog
@@ -651,6 +679,18 @@ const TimesheetPage: React.FC = () => {
 				open={irisOpen}
 				onClose={() => setIrisOpen(false)}
 				onActionConfirmed={loadMyTimesheet}
+			/>
+
+			{/* Assign Reporting Manager Dialog */}
+			<AssignReportingManagerDialog
+				open={assignManagerOpen}
+				onClose={() => setAssignManagerOpen(false)}
+				currentManagerId={currentUser?.reporting_manager_id}
+				onSuccess={loadMyTimesheet}
+				onOpenManagerAllocation={() => {
+					const idx = tabLabels.indexOf('Manager Allocation');
+					if (idx !== -1) setActiveTab(idx);
+				}}
 			/>
 
 			</Container>

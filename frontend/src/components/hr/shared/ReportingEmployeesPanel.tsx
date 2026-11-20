@@ -1,7 +1,7 @@
 import React from 'react';
 import {
 	Paper, CardContent, Typography, List, ListItem, ListItemAvatar,
-	ListItemText, Box, Chip, alpha, useTheme, Stack, Divider
+	ListItemText, Box, Chip, alpha, useTheme, Stack, Divider, Button
 } from '@mui/material';
 import { Group as TeamIcon, GroupOff as NoTeamIcon } from '@mui/icons-material';
 import EnterpriseAvatar from '../../common/avatar/Avatar';
@@ -18,9 +18,10 @@ interface TeamMemberItem {
 
 interface ReportingEmployeesPanelProps {
 	members: TeamMemberItem[];
+	onManageAllocation?: () => void;
 }
 
-export const ReportingEmployeesPanel: React.FC<ReportingEmployeesPanelProps> = ({ members }) => {
+export const ReportingEmployeesPanel: React.FC<ReportingEmployeesPanelProps> = ({ members, onManageAllocation }) => {
 	const theme = useTheme();
 	const isDark = theme.palette.mode === 'dark';
 
@@ -90,6 +91,18 @@ export const ReportingEmployeesPanel: React.FC<ReportingEmployeesPanelProps> = (
 						<Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, maxWidth: 180 }}>
 							There are no employees currently allocated to report to you.
 						</Typography>
+						{onManageAllocation && (
+							<Box sx={{ mt: 2 }}>
+								<Button
+									size="small"
+									variant="outlined"
+									onClick={onManageAllocation}
+									sx={{ textTransform: 'none', borderRadius: '8px', fontWeight: 600, fontSize: '0.75rem' }}
+								>
+									Manage Allocations
+								</Button>
+							</Box>
+						)}
 					</Box>
 				) : (
 					<List disablePadding>

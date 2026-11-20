@@ -52,6 +52,8 @@ interface WeeklyTimesheetGridProps {
 	canLogOnHolidays: boolean;
 	/** From the user's own TimesheetUserSettings; falls back to DEFAULT_WEEKLY_HOURS_TARGET when unset. */
 	weeklyHoursTarget?: number;
+	/** Callback to open reporting manager assignment dialog */
+	onAssignReportingManager?: () => void;
 }
 
 const WeeklyTimesheetGrid: React.FC<WeeklyTimesheetGridProps> = ({
@@ -68,7 +70,8 @@ const WeeklyTimesheetGrid: React.FC<WeeklyTimesheetGridProps> = ({
 	onRequestUnlock,
 	unlockRequestLoading,
 	canLogOnHolidays,
-	weeklyHoursTarget
+	weeklyHoursTarget,
+	onAssignReportingManager
 }) => {
 	const theme = useTheme();
 	const target = weeklyHoursTarget ?? DEFAULT_WEEKLY_HOURS_TARGET;
@@ -172,12 +175,29 @@ const WeeklyTimesheetGrid: React.FC<WeeklyTimesheetGridProps> = ({
 			</Stack>
 
 			{!reportingManagerSet && (
-				<Alert severity="warning" variant="outlined" sx={{ borderRadius: theme.layout.radius.card }}>
+				<Alert
+					severity="warning"
+					variant="outlined"
+					sx={{ borderRadius: theme.layout.radius.card }}
+					action={
+						onAssignReportingManager && (
+							<Button
+								color="warning"
+								variant="contained"
+								size="small"
+								onClick={onAssignReportingManager}
+								sx={{ fontWeight: 700, whiteSpace: 'nowrap', textTransform: 'none', borderRadius: '8px' }}
+							>
+								Assign Reporting Manager
+							</Button>
+						)
+					}
+				>
 					<Typography variant="body2" sx={{ fontWeight: 700 }}>
 						Submission blocked
 					</Typography>
 					<Typography variant="body2" color="text.secondary">
-						You don't have a Reporting Manager assigned. Ask your organization administrator to set one so you can submit weekly timesheets.
+						You don't have a Reporting Manager assigned. Select a manager to submit weekly timesheets for approval.
 					</Typography>
 				</Alert>
 			)}

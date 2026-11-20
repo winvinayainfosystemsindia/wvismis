@@ -37,7 +37,7 @@ class OrganizationService:
             "subscription_plan": SubscriptionPlan.ENTERPRISE,
             "is_active": True,
             "is_parent": True,
-            "max_users": 100000,
+            "max_users": 100,
             "settings": {"is_default_tenant": True, "is_parent_org": True},
         }
         return await self.repository.create(org_data)

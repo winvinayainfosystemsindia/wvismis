@@ -52,7 +52,7 @@ PLAN_DEFINITIONS = {
         "name": "Enterprise",
         "enabled_modules": [m.value for m in Module],
         "ai_credits_monthly": 2000,
-        "user_limit": None,
+        "user_limit": 100,
         "price_per_user": 499,
     },
 }
@@ -106,7 +106,7 @@ async def init_parent_org_and_superuser(db: AsyncSession) -> tuple[Organization,
             subscription_status="active",
             is_active=True,
             is_parent=True,
-            max_users=100000,
+            max_users=100,
             settings={
                 "is_default_tenant": True,
                 "is_parent_org": True,
@@ -131,6 +131,9 @@ async def init_parent_org_and_superuser(db: AsyncSession) -> tuple[Organization,
             updated_org = True
         if not getattr(parent_org, "subscription_status", None):
             parent_org.subscription_status = "active"
+            updated_org = True
+        if parent_org.max_users != 100:
+            parent_org.max_users = 100
             updated_org = True
         if updated_org:
             await db.commit()

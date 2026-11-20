@@ -49,6 +49,8 @@ def _serialize_org_for_console(org: Organization, user_count: int = 0) -> dict:
 
     plan_name = org.plan.name if getattr(org, "plan", None) else plan_str.capitalize()
     user_limit = (org.plan.user_limit if getattr(org, "plan", None) and org.plan.user_limit else org.max_users)
+    if user_limit is None or user_limit >= 100000:
+        user_limit = 100
     sub_status = getattr(org, "subscription_status", None) or settings_dict.get("subscription_status", "active")
     trial_exp = org.trial_expires_at.isoformat() if getattr(org, "trial_expires_at", None) else None
 

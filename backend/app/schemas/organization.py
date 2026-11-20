@@ -23,7 +23,7 @@ class OrganizationBase(BaseModel):
     is_parent: bool = Field(False, description="True if this is the root / parent organization (WinVinaya Infosystems)")
     subscription_plan: SubscriptionPlan = SubscriptionPlan.ENTERPRISE
     is_active: bool = True
-    max_users: int = Field(100, ge=1, le=100000)
+    max_users: int = Field(100, ge=1, le=100)
     settings: Optional[Dict[str, Any]] = Field(default_factory=dict)
 
     @field_validator("slug")
@@ -53,7 +53,7 @@ class OrganizationUpdate(BaseModel):
     is_parent: Optional[bool] = None
     subscription_plan: Optional[SubscriptionPlan] = None
     is_active: Optional[bool] = None
-    max_users: Optional[int] = Field(None, ge=1, le=100000)
+    max_users: Optional[int] = Field(None, ge=1, le=100)
     settings: Optional[Dict[str, Any]] = None
 
 

@@ -41,35 +41,6 @@ async def lifespan(app: FastAPI):
 
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
-            await conn.execute(text("""
-                DO $$
-                BEGIN
-                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='organizations' AND column_name='plan_id') THEN
-                        ALTER TABLE organizations ADD COLUMN plan_id INTEGER REFERENCES plans(id) ON DELETE SET NULL;
-                    END IF;
-                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='organizations' AND column_name='subscription_status') THEN
-                        ALTER TABLE organizations ADD COLUMN subscription_status VARCHAR(50) DEFAULT 'active';
-                    END IF;
-                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='organizations' AND column_name='trial_expires_at') THEN
-                        ALTER TABLE organizations ADD COLUMN trial_expires_at TIMESTAMP WITH TIME ZONE;
-                    END IF;
-                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='organizations' AND column_name='others') THEN
-                        ALTER TABLE organizations ADD COLUMN others JSONB DEFAULT '{}'::jsonb;
-                    END IF;
-                END $$;
-            """))
-
-        # Ensure new roles exist in Postgres enum type if userrole enum is used
-        try:
-            async with engine.connect() as conn:
-                await conn.execution_options(isolation_level="AUTOCOMMIT")
-                for val in ("owner", "member", "viewer"):
-                    try:
-                        await conn.execute(text(f"ALTER TYPE userrole ADD VALUE IF NOT EXISTS '{val}'"))
-                    except Exception:
-                        pass
-        except Exception:
-            pass
 
         async with AsyncSessionLocal() as session:
             await init_parent_org_and_superuser(session)

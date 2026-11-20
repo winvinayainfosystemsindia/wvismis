@@ -124,7 +124,7 @@ class ServiceUnavailableError(AppError):
 
 class AIServiceUnavailableError(ServiceUnavailableError):
     """Raised when the primary AI provider AND its configured fallback both fail (HTTP 503) --
-    i.e. every key on every configured provider has been exhausted (Groq's 3 keys, then Gemini).
+    i.e. every key on every configured provider has been exhausted (e.g. Anthropic Claude, then Gemini).
 
     Distinct from AICreditsExhaustedError: this means the AI infrastructure itself is down
     (rate-limited/erroring on every configured provider), not that the org is out of credits.

@@ -162,7 +162,7 @@ If your data is held within an Organization's workspace (e.g. you're an employee
 IRIS is WinVinaya MIS's built-in AI agent, and we want to be direct about how it handles your data:
 
 - **We do not train any AI model — ours or our providers' — on your data.** Prompts and business data sent to IRIS are used solely to generate the specific response or action you requested, in that moment, and are not used to train, fine-tune, or improve any underlying AI model.
-- IRIS is powered by third-party AI model providers (currently Groq and Google Gemini). These providers process the data required to generate a response but do so under contractual terms that prohibit using your data to train their models.
+- IRIS is powered by third-party AI model providers (currently Anthropic Claude and Google Gemini). These providers process the data required to generate a response but do so under contractual terms that prohibit using your data to train their models.
 - Data sent to these providers is limited to what's needed to fulfil the specific request (e.g. the relevant CRM record and your instruction), not your entire workspace.
 - We keep an internal audit log of IRIS's actions (what was requested, what was changed) for reliability, billing accuracy, and so you can review what IRIS did on your behalf — this log is treated with the same security protections as the rest of your data.
 - If our approach to AI processing changes in the future — for example, if we introduce an opt-in feature that does use data for model improvement — we will update this Policy and seek your explicit consent before enabling anything like that.
@@ -175,7 +175,7 @@ We share personal data only where necessary, and always under appropriate contra
 
 - **Infrastructure & hosting providers** — [Insert provider, e.g. AWS/Azure/GCP] for hosting our application and databases.
 - **Payment processors** — [Insert processor, e.g. Razorpay/Stripe] for handling billing and payment credentials.
-- **AI model providers** — Groq and Google Gemini, solely to process IRIS requests as described in Section 10.
+- **AI model providers** — Anthropic Claude and Google Gemini, solely to process IRIS requests as described in Section 10.
 - **Communication tools** — [Insert e.g. email delivery provider] for transactional emails (invoices, notifications, password resets).
 - **Calendar/meeting integrations** — where you choose to connect Google Meet or similar, for the Booking module.
 - **Legal & regulatory bodies** — where required to comply with a legal obligation, court order, or enforceable governmental request.

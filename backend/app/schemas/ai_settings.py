@@ -27,7 +27,6 @@ class AISettingsSaveRequest(BaseModel):
     GEMINI_API_KEY: str | None = None
     OPENAI_API_KEY: str | None = None
     ANTHROPIC_API_KEY: str | None = None
-    GROQ_API_KEY: str | None = None
     MISTRAL_API_KEY: str | None = None
     TOGETHER_API_KEY: str | None = None
     COHERE_API_KEY: str | None = None

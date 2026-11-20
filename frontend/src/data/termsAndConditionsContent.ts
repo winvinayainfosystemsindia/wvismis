@@ -122,7 +122,7 @@ We reserve the right to investigate and take appropriate action, including suspe
 
 ## 10. Third-Party Services
 
-The Service may integrate with or rely on third-party services, including payment processors, cloud hosting providers, AI model providers (currently Groq and Google Gemini), and calendar/meeting tools (e.g. Google Meet). Your use of such integrations may be subject to the third party's own terms, and we are not responsible for the acts or omissions of third-party providers, though we take care in selecting providers who meet appropriate security and data protection standards.
+The Service may integrate with or rely on third-party services, including payment processors, cloud hosting providers, AI model providers (currently Anthropic Claude and Google Gemini), and calendar/meeting tools (e.g. Google Meet). Your use of such integrations may be subject to the third party's own terms, and we are not responsible for the acts or omissions of third-party providers, though we take care in selecting providers who meet appropriate security and data protection standards.
 
 ---
 

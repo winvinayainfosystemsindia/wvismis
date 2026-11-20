@@ -13,10 +13,13 @@ def _resolve_env_file() -> str:
     if explicit_file:
         return explicit_file
     app_env = os.getenv("APP_ENV", os.getenv("ENVIRONMENT", "")).lower().strip()
-    if app_env in ("production", "prod") and os.path.exists(".env.prod"):
-        return ".env.prod"
-    if app_env in ("development", "dev") and os.path.exists(".env.dev"):
-        return ".env.dev"
+    for prefix in ("", "backend/"):
+        if app_env in ("production", "prod") and os.path.exists(f"{prefix}.env.prod"):
+            return f"{prefix}.env.prod"
+        if app_env in ("development", "dev") and os.path.exists(f"{prefix}.env.dev"):
+            return f"{prefix}.env.dev"
+        if os.path.exists(f"{prefix}.env"):
+            return f"{prefix}.env"
     return ".env"
 
 
@@ -109,22 +112,21 @@ class Settings(BaseSettings):
 
     # ── Harness Agentic AI Engine ────────────────────────────────────────────
     AI_ENABLED: bool = True
-    AI_PROVIDER: str = "gemini"  # gemini | openai | anthropic | groq | mistral | ollama
+    AI_PROVIDER: str = "anthropic"  # anthropic | gemini | openai | mistral | ollama
+    AI_FALLBACK_PROVIDER: str = "gemini"  # secondary fallback provider
 
     # Provider API Keys
+    ANTHROPIC_API_KEY: Optional[str] = None
     GEMINI_API_KEY: Optional[str] = None
     OPENAI_API_KEY: Optional[str] = None
-    ANTHROPIC_API_KEY: Optional[str] = None
-    GROQ_API_KEY: Optional[str] = None
     MISTRAL_API_KEY: Optional[str] = None
     TOGETHER_API_KEY: Optional[str] = None
     COHERE_API_KEY: Optional[str] = None
 
     # Default Models Per Provider
-    AI_MODEL_GEMINI: str = "gemini-1.5-flash"
+    AI_MODEL_ANTHROPIC: str = "claude-3-7-sonnet-20250219"
+    AI_MODEL_GEMINI: str = "gemini-3.6-flash,gemini-3.5-flash-lite"
     AI_MODEL_OPENAI: str = "gpt-4o-mini"
-    AI_MODEL_ANTHROPIC: str = "claude-3-5-haiku-20241022"
-    AI_MODEL_GROQ: str = "llama-3.3-70b-versatile"
     AI_MODEL_MISTRAL: str = "mistral-small-latest"
     AI_MODEL_TOGETHER: str = "meta-llama/Llama-3.1-8B-Instruct-Turbo"
     AI_MODEL_COHERE: str = "command-r"

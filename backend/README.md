@@ -36,7 +36,7 @@ backend/
 │   │   │   ├── registry.py         # Central MCP-compatible ToolRegistry
 │   │   │   └── tools/              # Built-in Multi-Tenant & Streaming AI Tools
 │   │   ├── prompts/                # Jinja2 system prompts (aria_planner.md)
-│   │   ├── providers/              # Multi-LLM adapters (Gemini, OpenAI, Anthropic, Groq, Mistral)
+│   │   ├── providers/              # Multi-LLM adapters (Anthropic Claude, Google Gemini, OpenAI, Mistral)
 │   │   ├── schemas/                # API request/response contracts
 │   │   └── services/               # Multi-turn chat service
 │   ├── core/                       # Core Infrastructure

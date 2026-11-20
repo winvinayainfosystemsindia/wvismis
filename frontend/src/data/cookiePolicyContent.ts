@@ -70,7 +70,7 @@ These cookies are only set with your consent, where required.
 Some cookies on WinVinaya MIS are set by third-party services we rely on to operate the platform:
 
 - **Payment processor** ([Insert e.g. Razorpay/Stripe]) — may set cookies during checkout to process payments securely and prevent fraud.
-- **AI infrastructure providers** (Groq, Google Gemini) — do not set cookies in your browser; they process data server-side as described in our Privacy Policy, not via client-side tracking.
+- **AI infrastructure providers** (Anthropic Claude, Google Gemini) — do not set cookies in your browser; they process data server-side as described in our Privacy Policy, not via client-side tracking.
 - **Calendar/meeting integrations** ([Insert e.g. Google Meet]) — if you connect a calendar integration through the Booking module, that provider's own cookies may apply under their respective policies.
 - **Analytics provider** ([Insert if applicable]) — as described in Section 3.3.
 

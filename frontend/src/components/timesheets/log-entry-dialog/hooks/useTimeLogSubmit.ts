@@ -25,12 +25,11 @@ export const useTimeLogSubmit = ({ log, rows, setError, onSave, onClose }: UseTi
 	const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 	const [deleting, setDeleting] = useState(false);
 
-	// Mirrors the backend's own rule (only draft/rejected entries are deletable) --
-	// the grid already blocks opening this dialog for submitted/approved logs, so
-	// this is mostly a defensive guard against stale UI state.
-	const canDelete = isEdit && !!log && (log.status === 'draft' || log.status === 'rejected');
+	// Mirrors the backend's rule: DRAFT, REJECTED, and SUBMITTED entries (within the
+	// current week / previous day / previous week free modification window) are deletable.
+	const canDelete = isEdit && !!log && (log.status === 'draft' || log.status === 'rejected' || log.status === 'submitted');
 
-	const handleSubmit = async () => {
+	const handleSubmit = async (submitImmediately: boolean = false) => {
 		setError(null);
 
 		for (let i = 0; i < rows.length; i++) {
@@ -48,7 +47,12 @@ export const useTimeLogSubmit = ({ log, rows, setError, onSave, onClose }: UseTi
 				await dispatch(updateTimeLog({ id: log.id, data: buildLogPayload(rows[0]) })).unwrap();
 			} else {
 				for (const row of rows) {
-					await dispatch(createTimeLog(buildLogPayload(row))).unwrap();
+					await dispatch(
+						createTimeLog({
+							...buildLogPayload(row),
+							submit: submitImmediately
+						})
+					).unwrap();
 				}
 			}
 			onSave?.();

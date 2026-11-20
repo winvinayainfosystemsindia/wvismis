@@ -34,6 +34,10 @@ class WeekUnlockStatus(str, enum.Enum):
     APPROVED = "approved"
     DENIED = "denied"
 
+class UnlockRequestType(str, enum.Enum):
+    UNLOCK = "unlock"
+    REVOKE = "revoke"
+
 class UserTimesheetCategory(BaseModel, TenantAwareMixin):
     """Personal or org-wide category for logging non-project time (e.g. Meeting, Support)"""
     __tablename__ = "user_timesheet_categories"
@@ -159,6 +163,13 @@ class TimesheetWeekUnlockRequest(BaseModel, TenantAwareMixin):
     )
     week_start_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
     week_end_date: Mapped[date] = mapped_column(Date, nullable=False)
+    request_type: Mapped[str] = mapped_column(
+        String(20),
+        default=UnlockRequestType.UNLOCK.value,
+        server_default="unlock",
+        nullable=False,
+        index=True,
+    )
     status: Mapped[WeekUnlockStatus] = mapped_column(
         Enum(WeekUnlockStatus, values_callable=lambda x: [e.value for e in x]),
         default=WeekUnlockStatus.PENDING,

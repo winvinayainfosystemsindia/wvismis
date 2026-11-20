@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, date
 from typing import Optional, Any
 from pydantic import BaseModel, ConfigDict, Field, field_validator
-from app.models.timesheet import TimesheetBillingType, TimesheetStatus, HolidayType, WeekUnlockStatus
+from app.models.timesheet import TimesheetBillingType, TimesheetStatus, HolidayType, WeekUnlockStatus, UnlockRequestType
 from app.schemas.project import ProjectResponse, ProjectTaskResponse
 
 # --- Category Schemas ---
@@ -89,7 +89,7 @@ class ProjectTimeLogBase(BaseModel):
         return round(v, 2)
 
 class ProjectTimeLogCreate(ProjectTimeLogBase):
-    pass
+    submit: bool = False
 
 class ProjectTimeLogUpdate(BaseModel):
     project_id: Optional[int] = None
@@ -129,10 +129,11 @@ class ProjectTimeLogResponse(ProjectTimeLogBase):
     user: Optional[TimesheetUserEmbedded] = None
 
 
-# --- Week Unlock Request Schemas ---
+# --- Week Unlock & Revoke Request Schemas ---
 class TimesheetWeekUnlockRequestCreate(BaseModel):
-    week_start_date: date  # Monday of the locked week
-    week_end_date: date    # Sunday of the locked week
+    week_start_date: date  # Monday of the target week
+    week_end_date: date    # Sunday of the target week
+    request_type: UnlockRequestType = UnlockRequestType.UNLOCK
     reason: Optional[str] = Field(None, max_length=1000)
 
 class TimesheetWeekUnlockResolve(BaseModel):
@@ -145,6 +146,7 @@ class TimesheetWeekUnlockRequestResponse(BaseModel):
     user_id: int
     week_start_date: date
     week_end_date: date
+    request_type: str = UnlockRequestType.UNLOCK.value
     status: WeekUnlockStatus
     reason: Optional[str] = None
     resolved_by_id: Optional[int] = None
@@ -157,7 +159,10 @@ class TimesheetWeekUnlockRequestResponse(BaseModel):
     user: Optional[TimesheetUserEmbedded] = None
 
 
-# --- Bulk Actions & Reports ---
+# --- Bulk Actions, Daily/Weekly Submit & Reports ---
+class TimesheetSubmitDayRequest(BaseModel):
+    log_date: date
+
 class TimesheetSubmitWeekRequest(BaseModel):
     start_date: date  # Monday of the week
     end_date: date    # Sunday of the week

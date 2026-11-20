@@ -156,22 +156,44 @@ const WeekUnlockRequestsPanel: React.FC<WeekUnlockRequestsPanelProps> = ({ reque
 
 	const columns: ColumnDefinition<TimesheetWeekUnlockRequest>[] = [
 		{ id: 'user_id', label: 'Team Member' },
+		{ id: 'request_type', label: 'Request Type', align: 'center' },
 		{ id: 'week_start_date', label: 'Week' },
 		{ id: 'reason', label: 'Reason' },
 		{ id: 'status', label: 'Status', align: 'center' },
 		{ id: 'actions', label: 'Resolution', align: 'right' }
 	];
 
+	const renderRequestType = (req: TimesheetWeekUnlockRequest) => {
+		const isRevoke = req.request_type === 'revoke';
+		return (
+			<Chip
+				label={isRevoke ? 'Revoke Submission' : 'Week Unlock'}
+				color={isRevoke ? 'warning' : 'info'}
+				variant="outlined"
+				size="small"
+				sx={{ fontWeight: 700, borderRadius: 2 }}
+			/>
+		);
+	};
+
 	const renderRow = (req: TimesheetWeekUnlockRequest) => (
 		<TableRow key={req.id} hover sx={{ '&:last-child td': { border: 0 } }}>
 			<TableCell>{renderMember(req)}</TableCell>
+			<TableCell align="center">{renderRequestType(req)}</TableCell>
 			<TableCell>{renderWeek(req)}</TableCell>
 			<TableCell>{renderReason(req.reason)}</TableCell>
 			<TableCell align="center">{renderStatus(req.status)}</TableCell>
 			<TableCell align="right" sx={{ pr: 3 }}>
 				{req.status === 'pending' ? (
 					<Stack direction="row" spacing={1} justifyContent="flex-end">
-						<Tooltip title="Approve unlock request" arrow>
+						<Tooltip
+							title={
+								req.request_type === 'revoke'
+									? 'Approve revoke request (reverts submitted/approved entries to Draft)'
+									: 'Approve unlock request'
+							}
+							arrow
+						>
 							<span>
 								<IconButton
 									size="small"
@@ -247,7 +269,7 @@ const WeekUnlockRequestsPanel: React.FC<WeekUnlockRequestsPanelProps> = ({ reque
 						<Stack direction="row" spacing={1} alignItems="center">
 							<LockOpenIcon sx={{ fontSize: 20, color: 'warning.main' }} />
 							<Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-								Week Unlock Requests
+								Unlock & Revoke Requests
 							</Typography>
 						</Stack>
 						<Tabs

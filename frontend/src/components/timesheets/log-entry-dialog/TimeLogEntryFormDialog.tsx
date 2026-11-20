@@ -147,8 +147,19 @@ const TimeLogEntryFormDialog: React.FC<TimeLogEntryFormDialogProps> = ({
 									</Button>
 								)}
 								<CancelButton onClick={onClose} disabled={submitting} />
+								{!isEdit && currentUser?.reporting_manager_id != null && (
+									<Button
+										onClick={() => handleSubmit(true)}
+										disabled={submitting}
+										variant="outlined"
+										color="primary"
+										sx={{ fontWeight: 700, borderRadius: 4, textTransform: 'none' }}
+									>
+										Save & Submit Daily
+									</Button>
+								)}
 								<SubmitButton
-									onClick={handleSubmit}
+									onClick={() => handleSubmit(false)}
 									loading={submitting}
 									sx={{ borderRadius: 4, minWidth: 120 }}
 								>
@@ -280,6 +291,12 @@ const TimeLogEntryFormDialog: React.FC<TimeLogEntryFormDialogProps> = ({
 						{error && (
 							<Alert severity="error" sx={{ borderRadius: 4 }}>
 								{error}
+							</Alert>
+						)}
+
+						{isEdit && log?.status === 'submitted' && (
+							<Alert severity="info" sx={{ borderRadius: 3 }}>
+								This entry is currently <strong>Submitted</strong>. Because it falls within the previous day / previous week modification window, you can update or delete it directly without manager permission.
 							</Alert>
 						)}
 

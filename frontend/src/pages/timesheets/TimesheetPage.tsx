@@ -34,6 +34,7 @@ import {
 	fetchMyTimeLogs,
 	fetchTeamTimeLogs,
 	fetchHolidays,
+	submitDay,
 	submitWeek,
 	approveWeek,
 	rejectWeek,
@@ -343,12 +344,23 @@ const TimesheetPage: React.FC = () => {
 	};
 
 	// Submissions
+	const handleSubmitDay = async (dateStr: string) => {
+		try {
+			const res = await dispatch(submitDay({ logDate: dateStr })).unwrap();
+			toast.success(res.message || `Submitted daily entries for ${dateStr}`);
+			loadMyTimesheet();
+		} catch (err: any) {
+			toast.error(err || 'Failed to submit daily timesheet');
+		}
+	};
+
 	const handleSubmitWeek = async () => {
 		try {
-			await dispatch(submitWeek({ startDate: startDateStr, endDate: endDateStr })).unwrap();
+			const res = await dispatch(submitWeek({ startDate: startDateStr, endDate: endDateStr })).unwrap();
+			toast.success(res.message || 'Weekly timesheet submitted for manager approval');
 			loadMyTimesheet();
-		} catch (err) {
-			// handled in state or locally
+		} catch (err: any) {
+			toast.error(err || 'Failed to submit weekly timesheet');
 		}
 	};
 
@@ -405,22 +417,39 @@ const TimesheetPage: React.FC = () => {
 		[teamSettings]
 	);
 
-	// Week unlock requests
-	const handleRequestUnlock = async (reason?: string) => {
+	// Week unlock & revoke requests
+	const handleRequestUnlock = async (reason?: string, requestType: 'unlock' | 'revoke' = 'unlock') => {
 		try {
-			await dispatch(requestWeekUnlock({ weekStartDate: startDateStr, weekEndDate: endDateStr, reason })).unwrap();
-			toast.success('Unlock request sent to your manager.');
+			await dispatch(
+				requestWeekUnlock({
+					weekStartDate: startDateStr,
+					weekEndDate: endDateStr,
+					reason,
+					requestType
+				})
+			).unwrap();
+			toast.success(
+				requestType === 'revoke'
+					? 'Revoke request sent to your allocated manager/admin.'
+					: 'Unlock request sent to your manager.'
+			);
 		} catch (err: any) {
-			toast.error(err || 'Failed to send unlock request');
+			toast.error(err || 'Failed to send request');
 		}
 	};
 
 	const handleApproveUnlock = async (requestId: number) => {
 		try {
-			await dispatch(approveWeekUnlock({ requestId })).unwrap();
-			toast.success('Unlock request approved.');
+			const updated = await dispatch(approveWeekUnlock({ requestId })).unwrap();
+			toast.success(
+				updated.request_type === 'revoke'
+					? 'Revoke request approved — timesheet entries reverted to Draft.'
+					: 'Unlock request approved.'
+			);
+			loadTeamTimesheet();
+			loadMyTimesheet();
 		} catch (err: any) {
-			toast.error(err || 'Failed to approve unlock request');
+			toast.error(err || 'Failed to approve request');
 		}
 	};
 
@@ -589,6 +618,7 @@ const TimesheetPage: React.FC = () => {
 						onCellClick={handleCellClick}
 						onAddRow={handleAddRow}
 						onSubmitWeek={handleSubmitWeek}
+						onSubmitDay={handleSubmitDay}
 						submitLoading={actionLoading}
 						reportingManagerSet={hasReportingManager}
 						isCurrentWeek={isCurrentWeek}

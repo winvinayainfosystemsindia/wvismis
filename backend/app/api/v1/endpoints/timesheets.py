@@ -9,14 +9,16 @@ from sqlalchemy.orm import selectinload
 
 from app.api.deps import get_db, get_current_user, require_roles
 from app.models.user import User, UserRole
-from app.models.timesheet import TimesheetStatus, TimesheetBillingType, HolidayType, ProjectTimeLog, WeekUnlockStatus
+from app.models.timesheet import (
+    TimesheetStatus, TimesheetBillingType, HolidayType, ProjectTimeLog, WeekUnlockStatus, UnlockRequestType
+)
 from app.models.project import Project, ProjectTask
 from app.schemas.timesheet import (
     TimesheetCategoryCreate, TimesheetCategoryUpdate, TimesheetCategoryResponse,
     OrgHolidayCreate, OrgHolidayUpdate, OrgHolidayResponse,
     TimesheetUserSettingsUpdate, TimesheetUserSettingsResponse,
     ProjectTimeLogCreate, ProjectTimeLogUpdate, ProjectTimeLogResponse,
-    TimesheetSubmitWeekRequest, TimesheetApproveRejectRequest, TimesheetReportRow,
+    TimesheetSubmitDayRequest, TimesheetSubmitWeekRequest, TimesheetApproveRejectRequest, TimesheetReportRow,
     TimesheetWeekUnlockRequestCreate, TimesheetWeekUnlockResolve, TimesheetWeekUnlockRequestResponse,
     TimesheetBulkApproveRequest, TimesheetBulkApproveResult, TimesheetTeamSettingsRow,
 )
@@ -311,6 +313,20 @@ async def delete_time_log(
     """Soft delete a draft or rejected time entry."""
     await TimesheetService.delete_time_log(db, current_user, log_id)
 
+@router.post("/submit-day")
+async def submit_daily_timesheet(
+    payload: TimesheetSubmitDayRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Submit draft/rejected time entries for a single day to the designated reporting manager."""
+    rowcount = await TimesheetService.submit_daily_timesheet(db, current_user, payload.log_date)
+    return {
+        "success": True,
+        "message": f"Successfully submitted {rowcount} time log(s) for {payload.log_date.isoformat()}.",
+        "submitted_count": rowcount
+    }
+
 @router.post("/submit-week")
 async def submit_weekly_timesheet(
     payload: TimesheetSubmitWeekRequest,
@@ -424,6 +440,8 @@ async def approve_user_week(
         start_date=payload.start_date, end_date=payload.end_date,
         status=TimesheetStatus.APPROVED, approved_by_id=current_user.id
     )
+    if approved == 0:
+        raise BadRequestError("No submitted time entries found to approve for the selected week")
     await db.commit()
     return {"success": True, "approved_count": approved}
 
@@ -450,6 +468,8 @@ async def reject_user_week(
         status=TimesheetStatus.REJECTED, approved_by_id=current_user.id,
         rejection_note=payload.rejection_note
     )
+    if rejected == 0:
+        raise BadRequestError("No submitted time entries found to reject for the selected week")
     await db.commit()
     return {"success": True, "rejected_count": rejected}
 
@@ -500,9 +520,10 @@ async def request_week_unlock(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Ask the reporting manager to re-open a past week that ended without being submitted."""
+    """Submit a week unlock request (for locked past weeks) or a revoke request
+    (for wrongly submitted or approved timesheets) to the allocated reporting manager or admin."""
     return await TimesheetService.request_week_unlock(
-        db, current_user, payload.week_start_date, payload.week_end_date, payload.reason
+        db, current_user, payload.week_start_date, payload.week_end_date, payload.reason, payload.request_type
     )
 
 @router.get("/week-unlock-requests/my", response_model=List[TimesheetWeekUnlockRequestResponse])
@@ -510,8 +531,8 @@ async def my_week_unlock_requests(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """The current user's own unlock requests, so the timesheet grid can show pending/
-    resolved status for a locked week."""
+    """The current user's own unlock/revoke requests, so the timesheet grid can show pending/
+    resolved status for a week."""
     return await TimesheetWeekUnlockRequestRepository.list_for_user(
         db, current_user.organization_id, current_user.id
     )
@@ -534,19 +555,34 @@ async def approve_week_unlock(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(MANAGER_OR_ADMIN_ROLES))
 ):
-    """Grant a pending unlock request -- the employee can then edit/submit that week once.
-    Authorized for that user's direct reporting manager, or any org ADMIN as the
-    escalation tier."""
+    """Grant a pending unlock or revoke request.
+    - For a REVOKE request (or any week with SUBMITTED/APPROVED entries), automatically
+      resets the week's submitted/approved entries back to DRAFT so the employee can
+      modify/delete and resubmit.
+    - Authorized for that user's direct reporting manager, or any org ADMIN."""
     req = await TimesheetWeekUnlockRequestRepository.get_by_id(db, request_id)
     if not req or req.organization_id != current_user.organization_id:
-        raise NotFoundError("Unlock request not found")
+        raise NotFoundError("Request not found")
 
     target_user = await UserRepository.get_by_id(db, req.user_id)
     if not target_user or not can_manage_timesheet_for(current_user, target_user):
-        raise ForbiddenError("You can only resolve unlock requests from your direct reports")
+        raise ForbiddenError("You can only resolve requests from your direct reports")
 
     if req.status != WeekUnlockStatus.PENDING:
         raise BadRequestError("This request has already been resolved")
+
+    # If this is a revoke request (or the week has submitted/approved entries), revert them to DRAFT
+    if req.request_type == UnlockRequestType.REVOKE.value or await ProjectTimeLogRepository.week_has_submitted_or_approved_entry(
+        db, current_user.organization_id, req.user_id, req.week_start_date, req.week_end_date
+    ):
+        await ProjectTimeLogRepository.unapprove_week(
+            db,
+            organization_id=current_user.organization_id,
+            user_id=req.user_id,
+            start_date=req.week_start_date,
+            end_date=req.week_end_date,
+            from_statuses=[TimesheetStatus.SUBMITTED, TimesheetStatus.APPROVED],
+        )
 
     updated = await TimesheetWeekUnlockRequestRepository.resolve(
         db, req, status=WeekUnlockStatus.APPROVED, resolved_by_id=current_user.id,

@@ -51,6 +51,9 @@ async def lifespan(app: FastAPI):
                     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='reporting_manager_id') THEN
                         ALTER TABLE users ADD COLUMN reporting_manager_id INTEGER REFERENCES users(id) ON DELETE SET NULL;
                     END IF;
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='timesheet_week_unlock_requests' AND column_name='request_type') THEN
+                        ALTER TABLE timesheet_week_unlock_requests ADD COLUMN request_type VARCHAR(20) NOT NULL DEFAULT 'unlock';
+                    END IF;
                 END $$;
             """))
 

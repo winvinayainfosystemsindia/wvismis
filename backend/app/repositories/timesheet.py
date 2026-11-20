@@ -7,7 +7,7 @@ from sqlalchemy.orm import selectinload
 from app.models.timesheet import (
     ProjectTimeLog, OrgHoliday, UserTimesheetCategory, TimesheetUserSettings,
     TimesheetStatus, TimesheetBillingType, HolidayType,
-    TimesheetWeekUnlockRequest, WeekUnlockStatus,
+    TimesheetWeekUnlockRequest, WeekUnlockStatus, UnlockRequestType,
 )
 from app.models.user import User
 
@@ -254,6 +254,36 @@ class ProjectTimeLogRepository:
         return result.scalars().first() is not None
 
     @staticmethod
+    async def week_has_approved_entry(db: AsyncSession, organization_id: int, user_id: int, week_start: date, week_end: date) -> bool:
+        """Whether any (non-deleted) entry in this week is APPROVED."""
+        result = await db.execute(
+            select(ProjectTimeLog.id).where(
+                ProjectTimeLog.organization_id == organization_id,
+                ProjectTimeLog.user_id == user_id,
+                ProjectTimeLog.log_date >= week_start,
+                ProjectTimeLog.log_date <= week_end,
+                ProjectTimeLog.status == TimesheetStatus.APPROVED,
+                ProjectTimeLog.is_deleted.is_(False)
+            ).limit(1)
+        )
+        return result.scalars().first() is not None
+
+    @staticmethod
+    async def week_has_submitted_entry(db: AsyncSession, organization_id: int, user_id: int, week_start: date, week_end: date) -> bool:
+        """Whether any (non-deleted) entry in this week is SUBMITTED."""
+        result = await db.execute(
+            select(ProjectTimeLog.id).where(
+                ProjectTimeLog.organization_id == organization_id,
+                ProjectTimeLog.user_id == user_id,
+                ProjectTimeLog.log_date >= week_start,
+                ProjectTimeLog.log_date <= week_end,
+                ProjectTimeLog.status == TimesheetStatus.SUBMITTED,
+                ProjectTimeLog.is_deleted.is_(False)
+            ).limit(1)
+        )
+        return result.scalars().first() is not None
+
+    @staticmethod
     async def list_users_with_pending_approvals(db: AsyncSession, organization_id: int) -> Sequence[int]:
         """Distinct user_ids (across the whole org) with at least one SUBMITTED
         (non-deleted) entry -- used by the reminder scheduler to nudge whoever
@@ -318,7 +348,7 @@ class ProjectTimeLogRepository:
         return result.scalars().first()
 
     @staticmethod
-    async def create(db: AsyncSession, *, organization_id: int, user_id: int, project_id: Optional[int] = None, task_id: Optional[int] = None, category_id: Optional[int] = None, log_date: date, hours: float, notes: Optional[str] = None, billing_type: TimesheetBillingType = TimesheetBillingType.BILLABLE, is_holiday_override: bool = False) -> ProjectTimeLog:
+    async def create(db: AsyncSession, *, organization_id: int, user_id: int, project_id: Optional[int] = None, task_id: Optional[int] = None, category_id: Optional[int] = None, log_date: date, hours: float, notes: Optional[str] = None, billing_type: TimesheetBillingType = TimesheetBillingType.BILLABLE, is_holiday_override: bool = False, status: TimesheetStatus = TimesheetStatus.DRAFT) -> ProjectTimeLog:
         log = ProjectTimeLog(
             organization_id=organization_id,
             user_id=user_id,
@@ -329,7 +359,7 @@ class ProjectTimeLogRepository:
             hours=hours,
             notes=notes,
             billing_type=billing_type,
-            status=TimesheetStatus.DRAFT,
+            status=status,
             is_holiday_override=is_holiday_override
         )
         db.add(log)
@@ -351,6 +381,23 @@ class ProjectTimeLogRepository:
         await db.flush()
 
     @staticmethod
+    async def submit_day(db: AsyncSession, organization_id: int, user_id: int, log_date: date) -> int:
+        stmt = (
+            update(ProjectTimeLog)
+            .where(
+                ProjectTimeLog.organization_id == organization_id,
+                ProjectTimeLog.user_id == user_id,
+                ProjectTimeLog.log_date == log_date,
+                ProjectTimeLog.status.in_([TimesheetStatus.DRAFT, TimesheetStatus.REJECTED]),
+                ProjectTimeLog.is_deleted.is_(False)
+            )
+            .values(status=TimesheetStatus.SUBMITTED, rejection_note=None)
+        )
+        result = await db.execute(stmt)
+        await db.flush()
+        return result.rowcount
+
+    @staticmethod
     async def submit_week(db: AsyncSession, organization_id: int, user_id: int, start_date: date, end_date: date) -> int:
         stmt = (
             update(ProjectTimeLog)
@@ -362,7 +409,7 @@ class ProjectTimeLogRepository:
                 ProjectTimeLog.status.in_([TimesheetStatus.DRAFT, TimesheetStatus.REJECTED]),
                 ProjectTimeLog.is_deleted.is_(False)
             )
-            .values(status=TimesheetStatus.SUBMITTED)
+            .values(status=TimesheetStatus.SUBMITTED, rejection_note=None)
         )
         result = await db.execute(stmt)
         await db.flush()
@@ -436,7 +483,9 @@ class TimesheetWeekUnlockRequestRepository:
     @staticmethod
     async def get_by_id(db: AsyncSession, id: int) -> Optional[TimesheetWeekUnlockRequest]:
         result = await db.execute(
-            select(TimesheetWeekUnlockRequest).where(
+            select(TimesheetWeekUnlockRequest)
+            .options(selectinload(TimesheetWeekUnlockRequest.user))
+            .where(
                 TimesheetWeekUnlockRequest.id == id, TimesheetWeekUnlockRequest.is_deleted.is_(False)
             )
         )
@@ -479,6 +528,7 @@ class TimesheetWeekUnlockRequestRepository:
     async def list_for_user(db: AsyncSession, organization_id: int, user_id: int) -> Sequence[TimesheetWeekUnlockRequest]:
         result = await db.execute(
             select(TimesheetWeekUnlockRequest)
+            .options(selectinload(TimesheetWeekUnlockRequest.user))
             .where(
                 TimesheetWeekUnlockRequest.organization_id == organization_id,
                 TimesheetWeekUnlockRequest.user_id == user_id,
@@ -515,6 +565,7 @@ class TimesheetWeekUnlockRequestRepository:
     async def create(
         db: AsyncSession, *, organization_id: int, user_id: int,
         week_start_date: date, week_end_date: date, reason: Optional[str] = None,
+        request_type: str = UnlockRequestType.UNLOCK.value,
         status: WeekUnlockStatus = WeekUnlockStatus.PENDING,
         resolved_by_id: Optional[int] = None, resolved_at: Optional[datetime] = None,
         resolution_note: Optional[str] = None,
@@ -524,6 +575,7 @@ class TimesheetWeekUnlockRequestRepository:
             user_id=user_id,
             week_start_date=week_start_date,
             week_end_date=week_end_date,
+            request_type=request_type,
             reason=reason,
             status=status,
             resolved_by_id=resolved_by_id,
@@ -532,8 +584,12 @@ class TimesheetWeekUnlockRequestRepository:
         )
         db.add(req)
         await db.flush()
-        await db.refresh(req)
-        return req
+        result = await db.execute(
+            select(TimesheetWeekUnlockRequest)
+            .options(selectinload(TimesheetWeekUnlockRequest.user))
+            .where(TimesheetWeekUnlockRequest.id == req.id)
+        )
+        return result.scalar_one()
 
     @staticmethod
     async def resolve(

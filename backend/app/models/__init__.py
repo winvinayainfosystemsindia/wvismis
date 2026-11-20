@@ -25,6 +25,7 @@ from app.models.timesheet import (
     TimesheetStatus,
     HolidayType,
     WeekUnlockStatus,
+    UnlockRequestType,
     UserTimesheetCategory,
     OrgHoliday,
     TimesheetUserSettings,

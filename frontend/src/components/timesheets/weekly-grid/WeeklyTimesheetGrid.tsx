@@ -23,6 +23,10 @@ import {
 	Error as RejectedIcon,
 	LockOutlined as LockIcon,
 	WarningAmberOutlined as OvertimeIcon,
+	SendOutlined as SubmitDayIcon,
+	UndoOutlined as RevokeIcon,
+	CheckCircleOutline as ApprovedCheckIcon,
+	TaskAltOutlined as SubmittedCheckIcon,
 } from '@mui/icons-material';
 import type { ProjectTimeLog, OrgHoliday, TimesheetWeekUnlockRequest } from '../../../models/timesheet';
 import { DEFAULT_WEEKLY_HOURS_TARGET } from '../../../models/timesheet';
@@ -40,13 +44,14 @@ interface WeeklyTimesheetGridProps {
 	onCellClick: (dateStr: string, log?: ProjectTimeLog) => void;
 	onAddRow: () => void;
 	onSubmitWeek: () => void;
+	onSubmitDay?: (dateStr: string) => void;
 	submitLoading: boolean;
 	reportingManagerSet: boolean;
-	/** False once the viewed week has fully ended -- past weeks lock automatically. */
+	/** False once the viewed week has fully ended. */
 	isCurrentWeek: boolean;
-	/** The current user's own unlock requests, across all weeks -- filtered internally to this week. */
+	/** The current user's own unlock/revoke requests, across all weeks -- filtered internally to this week. */
 	myUnlockRequests: TimesheetWeekUnlockRequest[];
-	onRequestUnlock: (reason?: string) => void;
+	onRequestUnlock: (reason?: string, requestType?: 'unlock' | 'revoke') => void;
 	unlockRequestLoading: boolean;
 	/** Manager-granted exception to log time on holidays/Sundays -- without it, holiday cells are read-only. */
 	canLogOnHolidays: boolean;
@@ -63,6 +68,7 @@ const WeeklyTimesheetGrid: React.FC<WeeklyTimesheetGridProps> = ({
 	onCellClick,
 	onAddRow,
 	onSubmitWeek,
+	onSubmitDay,
 	submitLoading,
 	reportingManagerSet,
 	isCurrentWeek,
@@ -76,22 +82,26 @@ const WeeklyTimesheetGrid: React.FC<WeeklyTimesheetGridProps> = ({
 	const theme = useTheme();
 	const target = weeklyHoursTarget ?? DEFAULT_WEEKLY_HOURS_TARGET;
 	const isDark = theme.palette.mode === 'dark';
-	const todayStr = React.useMemo(() => {
-		const d = new Date();
-		return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-	}, []);
 
 	const {
 		requestDialogOpen, setRequestDialogOpen,
+		requestDialogMode,
 		requestReason, setRequestReason,
+		requestReasonError, setRequestReasonError,
 		dateStrings,
+		todayStr,
+		isFreeEditWeek,
 		isHolidayDate,
 		holidayLabel,
 		gridRows,
 		dayTotals,
+		unsubmittedByDay,
+		dayStatusMap,
 		weeklyStatus,
 		isWeekClosed,
 		hasUnsubmittedEntries,
+		hasApprovedEntries,
+		hasApprovedOrSubmitted,
 		grandTotal,
 		isLocked,
 		pendingRequest,
@@ -107,6 +117,9 @@ const WeeklyTimesheetGrid: React.FC<WeeklyTimesheetGridProps> = ({
 		onRequestUnlock,
 		isCurrentWeek
 	});
+
+	const todayInWeek = dateStrings.includes(todayStr);
+	const todayUnsubmittedCount = unsubmittedByDay[todayStr] || 0;
 
 	return (
 		<Stack spacing={3}>
@@ -151,7 +164,7 @@ const WeeklyTimesheetGrid: React.FC<WeeklyTimesheetGridProps> = ({
 					)}
 				</Stack>
 
-				<Stack direction="row" spacing={1.5} width={{ xs: '100%', sm: 'auto' }}>
+				<Stack direction="row" spacing={1.5} width={{ xs: '100%', sm: 'auto' }} flexWrap="wrap" useFlexGap>
 					<Button
 						variant="outlined"
 						startIcon={<AddIcon />}
@@ -161,6 +174,34 @@ const WeeklyTimesheetGrid: React.FC<WeeklyTimesheetGridProps> = ({
 					>
 						Add Row
 					</Button>
+					{hasApprovedOrSubmitted && !pendingRequest && (
+						<Tooltip title="Wrongly submitted time? Request your allocated reporting manager or admin to revoke this submission back to Draft.">
+							<span>
+								<Button
+									variant="outlined"
+									color="warning"
+									startIcon={<RevokeIcon />}
+									onClick={() => handleOpenRequestDialog('revoke')}
+									disabled={unlockRequestLoading || !reportingManagerSet}
+									sx={{ borderRadius: '10px', px: 2, fontWeight: 700, textTransform: 'none' }}
+								>
+									Request Revoke
+								</Button>
+							</span>
+						</Tooltip>
+					)}
+					{todayInWeek && todayUnsubmittedCount > 0 && onSubmitDay && (
+						<Button
+							variant="outlined"
+							color="primary"
+							startIcon={<SubmitDayIcon />}
+							onClick={() => onSubmitDay(todayStr)}
+							disabled={submitLoading || !reportingManagerSet || isLocked}
+							sx={{ borderRadius: '10px', px: 2, fontWeight: 700, textTransform: 'none' }}
+						>
+							Submit Today ({todayUnsubmittedCount})
+						</Button>
+					)}
 					{hasUnsubmittedEntries && (
 						<AddButton
 							hideIcon
@@ -211,7 +252,7 @@ const WeeklyTimesheetGrid: React.FC<WeeklyTimesheetGridProps> = ({
 							<Button
 								color="inherit"
 								size="small"
-								onClick={handleOpenRequestDialog}
+								onClick={() => handleOpenRequestDialog('unlock')}
 								disabled={unlockRequestLoading}
 								sx={{ fontWeight: 700, whiteSpace: 'nowrap' }}
 							>
@@ -225,7 +266,7 @@ const WeeklyTimesheetGrid: React.FC<WeeklyTimesheetGridProps> = ({
 						<>Unlock request sent to your manager on {pendingRequest.created_at.split('T')[0]} — waiting for approval.</>
 					) : (
 						<>
-							This week has already ended and wasn't submitted in time, so it's locked. Request access from your manager to add or edit entries.
+							This week is older than the previous week and wasn't submitted in time, so it's locked. Request access from your manager to add or edit entries.
 							{latestDenied && (
 								<Typography variant="caption" display="block" sx={{ mt: 0.5, fontStyle: 'italic' }}>
 									Your last request was denied{latestDenied.resolution_note ? `: ${latestDenied.resolution_note}` : '.'}
@@ -233,6 +274,41 @@ const WeeklyTimesheetGrid: React.FC<WeeklyTimesheetGridProps> = ({
 							)}
 						</>
 					)}
+				</Alert>
+			)}
+
+			{!isLocked && pendingRequest && (
+				<Alert severity="info" sx={{ borderRadius: 4 }}>
+					{pendingRequest.request_type === 'revoke'
+						? `Revoke request sent to your allocated manager/admin on ${pendingRequest.created_at.split('T')[0]} — waiting for approval to revert submitted entries to Draft.`
+						: `Unlock request sent to your manager on ${pendingRequest.created_at.split('T')[0]} — waiting for approval.`}
+				</Alert>
+			)}
+
+			{hasApprovedEntries && !pendingRequest && (
+				<Alert
+					severity="success"
+					sx={{ borderRadius: 4 }}
+					action={
+						<Button
+							color="inherit"
+							size="small"
+							startIcon={<RevokeIcon fontSize="small" />}
+							onClick={() => handleOpenRequestDialog('revoke')}
+							disabled={unlockRequestLoading || !reportingManagerSet}
+							sx={{ fontWeight: 700, whiteSpace: 'nowrap', textTransform: 'none' }}
+						>
+							Request Revoke
+						</Button>
+					}
+				>
+					This week has received final weekly approval from your manager. Need to correct an entry? Request a revoke from your manager or admin.
+				</Alert>
+			)}
+
+			{isFreeEditWeek && !hasApprovedEntries && weeklyStatus === 'submitted' && (
+				<Alert severity="info" sx={{ borderRadius: 4 }}>
+					Daily entries submitted. You can still modify submitted entries for the previous day and previous week without manager permission before final weekly approval, or click <strong>Request Revoke</strong> to pull the submission back to Draft.
 				</Alert>
 			)}
 
@@ -300,13 +376,63 @@ const WeeklyTimesheetGrid: React.FC<WeeklyTimesheetGridProps> = ({
 												: undefined
 										}}
 									>
-										<Stack direction="row" spacing={0.25} justifyContent="center" alignItems="center">
-											<Typography variant="body2" sx={{ fontWeight: 700, whiteSpace: 'nowrap' }}>
-												{dayName} {dayNum}
-											</Typography>
-											{isHoliday && (
-												<Tooltip title={`Holiday: ${holidayLabel(dStr)}`}>
-													<HolidayIcon sx={{ fontSize: '0.85rem', color: 'warning.main', flexShrink: 0 }} />
+										<Stack direction="column" spacing={0.5} alignItems="center" justifyContent="center">
+											<Stack direction="row" spacing={0.25} justifyContent="center" alignItems="center">
+												<Typography variant="body2" sx={{ fontWeight: 700, whiteSpace: 'nowrap' }}>
+													{dayName} {dayNum}
+												</Typography>
+												{isHoliday && (
+													<Tooltip title={`Holiday: ${holidayLabel(dStr)}`}>
+														<HolidayIcon sx={{ fontSize: '0.85rem', color: 'warning.main', flexShrink: 0 }} />
+													</Tooltip>
+												)}
+												{dayStatusMap[dStr] === 'approved' && (
+													<Tooltip title="Day approved by manager">
+														<ApprovedCheckIcon sx={{ fontSize: '0.9rem', color: 'success.main' }} />
+													</Tooltip>
+												)}
+												{dayStatusMap[dStr] === 'submitted' && (
+													<Tooltip title="Day submitted (weekly manager approval pending)">
+														<SubmittedCheckIcon sx={{ fontSize: '0.9rem', color: 'warning.main' }} />
+													</Tooltip>
+												)}
+											</Stack>
+											{unsubmittedByDay[dStr] > 0 && dStr <= todayStr && !isLocked && !isWeekClosed && onSubmitDay && (
+												<Tooltip
+													title={
+														reportingManagerSet
+															? `Submit ${unsubmittedByDay[dStr]} entry(s) for ${dayName} ${dayNum}`
+															: 'Assign a Reporting Manager to submit daily entries'
+													}
+												>
+													<span>
+														<Button
+															size="small"
+															variant="text"
+															color="primary"
+															disabled={submitLoading || !reportingManagerSet}
+															onClick={(e) => {
+																e.stopPropagation();
+																onSubmitDay(dStr);
+															}}
+															sx={{
+																minWidth: 'auto',
+																px: 0.75,
+																py: 0.1,
+																fontSize: '0.68rem',
+																fontWeight: 700,
+																lineHeight: 1.3,
+																borderRadius: '6px',
+																textTransform: 'none',
+																bgcolor: alpha(theme.palette.primary.main, 0.08),
+																'&:hover': {
+																	bgcolor: alpha(theme.palette.primary.main, 0.16)
+																}
+															}}
+														>
+															Submit Day
+														</Button>
+													</span>
 												</Tooltip>
 											)}
 										</Stack>
@@ -383,18 +509,26 @@ const WeeklyTimesheetGrid: React.FC<WeeklyTimesheetGridProps> = ({
 										const log = row.cells[dateStr];
 										const isHoliday = isHolidayDate(dateStr);
 										const isToday = dateStr === todayStr;
+										const isFutureDate = dateStr > todayStr;
 										const isApproved = log?.status === 'approved';
 										const isSubmitted = log?.status === 'submitted';
 										const isHolidayBlocked = isHoliday && !canLogOnHolidays;
-										const isCellDisabled = (log && (isApproved || isSubmitted)) || isLocked || isHolidayBlocked || isWeekClosed;
+										// Submitted entries in the current week (including previous day) and previous week
+										// can be modified directly without manager permission until final weekly approval.
+										const canModifySubmitted = isSubmitted && (isFreeEditWeek || !!activeGrant) && !hasApprovedEntries;
+										const isCellDisabled =
+											isFutureDate ||
+											(log && isApproved) ||
+											(log && isSubmitted && !canModifySubmitted) ||
+											isLocked ||
+											isHolidayBlocked ||
+											isWeekClosed;
 
 										return (
 											<TableCell
 												key={dateStr}
 												align="center"
 												onClick={() => {
-													// Prevent editing submitted/approved logs, any cell in a locked week,
-													// or a holiday/Sunday cell without a manager-granted override
 													if (isCellDisabled) return;
 													onCellClick(dateStr, log);
 												}}
@@ -490,7 +624,7 @@ const WeeklyTimesheetGrid: React.FC<WeeklyTimesheetGridProps> = ({
 			<BaseDialog
 				open={requestDialogOpen}
 				onClose={() => setRequestDialogOpen(false)}
-				title="Request Manager Access"
+				title={requestDialogMode === 'revoke' ? 'Request Timesheet Revoke' : 'Request Manager Access'}
 				maxWidth="xs"
 				actions={
 					<>
@@ -500,26 +634,39 @@ const WeeklyTimesheetGrid: React.FC<WeeklyTimesheetGridProps> = ({
 						<Button
 							onClick={handleSubmitUnlockRequest}
 							variant="contained"
+							color={requestDialogMode === 'revoke' ? 'warning' : 'primary'}
 							disabled={unlockRequestLoading}
 							sx={{ borderRadius: 3, fontWeight: 700 }}
 						>
-							Send Request
+							{requestDialogMode === 'revoke' ? 'Submit Revoke Request' : 'Send Request'}
 						</Button>
 					</>
 				}
 			>
 				<Typography variant="body2" sx={{ mb: 2, color: 'text.secondary' }}>
-					Your manager will be asked to unlock this week so you can add/edit and submit it. Let them know why it's late (optional).
+					{requestDialogMode === 'revoke'
+						? 'Your allocated reporting manager (or admin) will review this request. Once approved, all submitted/approved entries for this week will be reverted to Draft so you can correct and resubmit them.'
+						: "Your manager will be asked to unlock this week so you can add/edit and submit it. Let them know why it's late (optional)."}
 				</Typography>
 				<TextField
-					label="Reason (optional)"
+					label={requestDialogMode === 'revoke' ? 'Reason for Revoke (required)' : 'Reason (optional)'}
+					required={requestDialogMode === 'revoke'}
+					error={!!requestReasonError}
+					helperText={requestReasonError || undefined}
 					multiline
 					rows={3}
 					value={requestReason}
-					onChange={(e) => setRequestReason(e.target.value)}
+					onChange={(e) => {
+						setRequestReason(e.target.value);
+						if (requestReasonError) setRequestReasonError(null);
+					}}
 					fullWidth
 					autoFocus
-					placeholder="e.g. I was on leave and missed the submission window."
+					placeholder={
+						requestDialogMode === 'revoke'
+							? 'e.g. Logged hours under the wrong project/task and need to revise.'
+							: 'e.g. I was on leave and missed the submission window.'
+					}
 				/>
 			</BaseDialog>
 		</Stack>

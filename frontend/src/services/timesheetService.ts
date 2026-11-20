@@ -98,6 +98,7 @@ const timesheetService = {
 		hours: number;
 		notes?: string | null;
 		billing_type: string;
+		submit?: boolean;
 	}): Promise<ProjectTimeLog> => {
 		const response = await api.post('/timesheets/', data);
 		return response.data;
@@ -118,6 +119,11 @@ const timesheetService = {
 
 	deleteTimeLog: async (id: number): Promise<void> => {
 		await api.delete(`/timesheets/${id}`);
+	},
+
+	submitDay: async (logDate: string): Promise<{ success: boolean; message: string; submitted_count: number }> => {
+		const response = await api.post('/timesheets/submit-day', { log_date: logDate });
+		return response.data;
 	},
 
 	submitWeek: async (startDate: string, endDate: string): Promise<{ success: boolean; message: string; submitted_count: number }> => {
@@ -178,12 +184,18 @@ const timesheetService = {
 	},
 
 	// ==========================================
-	// 5.5 WEEK UNLOCK REQUESTS
+	// 5.5 WEEK UNLOCK & REVOKE REQUESTS
 	// ==========================================
-	requestWeekUnlock: async (weekStartDate: string, weekEndDate: string, reason?: string): Promise<TimesheetWeekUnlockRequest> => {
+	requestWeekUnlock: async (
+		weekStartDate: string,
+		weekEndDate: string,
+		reason?: string,
+		requestType: 'unlock' | 'revoke' = 'unlock'
+	): Promise<TimesheetWeekUnlockRequest> => {
 		const response = await api.post('/timesheets/week-unlock-requests', {
 			week_start_date: weekStartDate,
 			week_end_date: weekEndDate,
+			request_type: requestType,
 			reason: reason || null
 		});
 		return response.data;

@@ -5,6 +5,7 @@ export type TimesheetBillingType = 'billable' | 'non_billable';
 export type TimesheetStatus = 'draft' | 'submitted' | 'approved' | 'rejected';
 export type HolidayType = 'public' | 'org' | 'custom' | 'blackout';
 export type WeekUnlockStatus = 'pending' | 'approved' | 'denied';
+export type UnlockRequestType = 'unlock' | 'revoke';
 
 export interface TimesheetCategory {
 	id: number;
@@ -98,6 +99,7 @@ export interface TimesheetWeekUnlockRequest {
 	user_id: number;
 	week_start_date: string; // YYYY-MM-DD, Monday
 	week_end_date: string;   // YYYY-MM-DD, Sunday
+	request_type?: UnlockRequestType;
 	status: WeekUnlockStatus;
 	reason?: string;
 	resolved_by_id?: number;

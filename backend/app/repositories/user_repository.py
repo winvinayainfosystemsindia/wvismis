@@ -14,6 +14,22 @@ class UserRepository(BaseRepository[User]):
     def __init__(self, db: AsyncSession):
         super().__init__(User, db)
 
+    @staticmethod
+    async def get_by_id(db: AsyncSession, user_id: int) -> Optional[User]:
+        """Static lookup by primary key ID"""
+        result = await db.execute(
+            select(User).options(selectinload(User.organization)).where(User.id == user_id, User.is_deleted == False)
+        )
+        return result.scalar_one_or_none()
+
+    @staticmethod
+    async def get_by_public_id(db: AsyncSession, public_id) -> Optional[User]:
+        """Static lookup by UUID public_id"""
+        result = await db.execute(
+            select(User).options(selectinload(User.organization)).where(User.public_id == public_id, User.is_deleted == False)
+        )
+        return result.scalar_one_or_none()
+
     async def get(
         self,
         id: int,

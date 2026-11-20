@@ -162,6 +162,7 @@ export const createTimeLog = createAsyncThunk(
 			hours: number;
 			notes?: string | null;
 			billing_type: string;
+			submit?: boolean;
 		},
 		{ rejectWithValue }
 	) => {
@@ -206,6 +207,17 @@ export const deleteTimeLog = createAsyncThunk(
 			return id;
 		} catch (error: any) {
 			return rejectWithValue(extractErrorMessage(error, 'Failed to delete time log'));
+		}
+	}
+);
+
+export const submitDay = createAsyncThunk(
+	'timesheets/submitDay',
+	async (arg: { logDate: string }, { rejectWithValue }) => {
+		try {
+			return await timesheetService.submitDay(arg.logDate);
+		} catch (error: any) {
+			return rejectWithValue(extractErrorMessage(error, 'Failed to submit daily timesheet'));
 		}
 	}
 );
@@ -389,14 +401,22 @@ export const fetchTeamSettings = createAsyncThunk(
 	}
 );
 
-// --- Week Unlock Requests ---
+// --- Week Unlock & Revoke Requests ---
 export const requestWeekUnlock = createAsyncThunk(
 	'timesheets/requestWeekUnlock',
-	async (arg: { weekStartDate: string; weekEndDate: string; reason?: string }, { rejectWithValue }) => {
+	async (
+		arg: { weekStartDate: string; weekEndDate: string; reason?: string; requestType?: 'unlock' | 'revoke' },
+		{ rejectWithValue }
+	) => {
 		try {
-			return await timesheetService.requestWeekUnlock(arg.weekStartDate, arg.weekEndDate, arg.reason);
+			return await timesheetService.requestWeekUnlock(
+				arg.weekStartDate,
+				arg.weekEndDate,
+				arg.reason,
+				arg.requestType || 'unlock'
+			);
 		} catch (error: any) {
-			return rejectWithValue(extractErrorMessage(error, 'Failed to request week unlock'));
+			return rejectWithValue(extractErrorMessage(error, 'Failed to submit request'));
 		}
 	}
 );
@@ -685,7 +705,8 @@ const timesheetSlice = createSlice({
 			.addMatcher(
 				(action) =>
 					action.type.endsWith('/pending') &&
-					(action.type.includes('submitWeek') ||
+					(action.type.includes('submitDay') ||
+						action.type.includes('submitWeek') ||
 						action.type.includes('approveWeek') ||
 						action.type.includes('rejectWeek') ||
 						action.type.includes('unapproveWeek')),
@@ -697,7 +718,8 @@ const timesheetSlice = createSlice({
 			.addMatcher(
 				(action) =>
 					action.type.endsWith('/fulfilled') &&
-					(action.type.includes('submitWeek') ||
+					(action.type.includes('submitDay') ||
+						action.type.includes('submitWeek') ||
 						action.type.includes('approveWeek') ||
 						action.type.includes('rejectWeek') ||
 						action.type.includes('unapproveWeek')),
@@ -708,7 +730,8 @@ const timesheetSlice = createSlice({
 			.addMatcher(
 				(action) =>
 					action.type.endsWith('/rejected') &&
-					(action.type.includes('submitWeek') ||
+					(action.type.includes('submitDay') ||
+						action.type.includes('submitWeek') ||
 						action.type.includes('approveWeek') ||
 						action.type.includes('rejectWeek') ||
 						action.type.includes('unapproveWeek')),

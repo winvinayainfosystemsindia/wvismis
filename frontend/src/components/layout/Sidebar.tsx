@@ -825,24 +825,6 @@ const Sidebar: React.FC = () => {
 									}
 								]}
 							/>
-							{drawerExpanded && (
-								<Typography
-									variant="caption"
-									sx={{
-										display: 'block',
-										textAlign: 'center',
-										fontSize: '0.66rem',
-										color: sidebarTextMuted,
-										opacity: 0.8,
-										pt: 1,
-										pb: 0.25,
-										lineHeight: 1.25,
-									}}
-								>
-									Designed & Powered by<br />
-									<strong>WinVinaya InfoSystems</strong>
-								</Typography>
-							)}
 						</Box>
 					)
 				)}

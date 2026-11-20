@@ -43,15 +43,70 @@ export const fetchOwners = createAsyncThunk('crm/fetchOwners', async () => {
 
 export const fetchActiveReminders = createAsyncThunk(
 	'crm/fetchActiveReminders',
-	async (_payload: { entityType: string; entityIds: number[] } | undefined) => {
-		return [] as Reminder[];
+	async (payload: { entityType: string; entityIds: number[] } | undefined) => {
+		if (!payload || !payload.entityIds?.length) return [] as Reminder[];
+		try {
+			const res = await api.get('/reminders', {
+				params: {
+					entity_type: payload.entityType,
+					entity_ids: payload.entityIds.join(','),
+					status: 'pending',
+				},
+			});
+			return res.data as Reminder[];
+		} catch {
+			return [] as Reminder[];
+		}
 	}
 );
 
 export const fetchReminders = createAsyncThunk(
 	'crm/fetchReminders',
-	async (_payload: { entityType: string; entityId: number } | undefined) => {
-		return [] as Reminder[];
+	async (payload: { entityType: string; entityId: number } | undefined) => {
+		if (!payload || !payload.entityId) return [] as Reminder[];
+		try {
+			const res = await api.get('/reminders', {
+				params: {
+					entity_type: payload.entityType,
+					entity_id: payload.entityId,
+					status: 'pending',
+				},
+			});
+			return res.data as Reminder[];
+		} catch {
+			return [] as Reminder[];
+		}
+	}
+);
+
+export const createReminder = createAsyncThunk(
+	'crm/createReminder',
+	async (payload: {
+		entity_type: string;
+		entity_id: number;
+		title: string;
+		description?: string;
+		remind_at: string;
+		send_email?: boolean;
+	}) => {
+		const res = await api.post('/reminders', payload);
+		return res.data as Reminder;
+	}
+);
+
+export const deleteReminder = createAsyncThunk(
+	'crm/deleteReminder',
+	async (reminderId: number) => {
+		await api.delete(`/reminders/${reminderId}`);
+		return reminderId;
+	}
+);
+
+export const dismissReminder = createAsyncThunk(
+	'crm/dismissReminder',
+	async (reminderId: number) => {
+		const res = await api.patch(`/reminders/${reminderId}/dismiss`);
+		return res.data as Reminder;
 	}
 );
 
@@ -80,6 +135,21 @@ const crmSlice = createSlice({
 			})
 			.addCase(fetchReminders.fulfilled, (state, action) => {
 				state.reminders = action.payload;
+			})
+			.addCase(createReminder.fulfilled, (state, action) => {
+				const reminder = action.payload;
+				state.reminders = [reminder, ...state.reminders.filter((r) => r.id !== reminder.id)];
+				state.activeReminders = [reminder, ...state.activeReminders.filter((r) => r.id !== reminder.id)];
+			})
+			.addCase(deleteReminder.fulfilled, (state, action) => {
+				const id = action.payload;
+				state.reminders = state.reminders.filter((r) => r.id !== id);
+				state.activeReminders = state.activeReminders.filter((r) => r.id !== id);
+			})
+			.addCase(dismissReminder.fulfilled, (state, action) => {
+				const updated = action.payload;
+				state.reminders = state.reminders.filter((r) => r.id !== updated.id);
+				state.activeReminders = state.activeReminders.filter((r) => r.id !== updated.id);
 			});
 	},
 });

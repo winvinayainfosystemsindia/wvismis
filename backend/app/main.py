@@ -54,6 +54,9 @@ async def lifespan(app: FastAPI):
                     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='timesheet_week_unlock_requests' AND column_name='request_type') THEN
                         ALTER TABLE timesheet_week_unlock_requests ADD COLUMN request_type VARCHAR(20) NOT NULL DEFAULT 'unlock';
                     END IF;
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='reminders' AND column_name='public_id') THEN
+                        ALTER TABLE reminders ADD COLUMN public_id UUID DEFAULT gen_random_uuid();
+                    END IF;
                 END $$;
             """))
 

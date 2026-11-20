@@ -32,6 +32,7 @@ from app.models.timesheet import (
     ProjectTimeLog,
     TimesheetWeekUnlockRequest,
 )
+from app.models.reminder import Reminder
 
 __all__ = [
     "BaseModel",
@@ -74,4 +75,5 @@ __all__ = [
     "TimesheetUserSettings",
     "ProjectTimeLog",
     "TimesheetWeekUnlockRequest",
+    "Reminder",
 ]

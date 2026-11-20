@@ -323,3 +323,39 @@ class EmailNotificationService:
             html_content=html,
             attachments=[(filename, file_content)],
         )
+
+    @classmethod
+    async def send_task_reminder_notification(
+        cls,
+        user: User,
+        task_title: str,
+        scheduled_time: str,
+        project_name: Optional[str] = None,
+        due_date: Optional[str] = None,
+        description: Optional[str] = None,
+    ) -> bool:
+        """Sends an automated scheduled reminder for a project task."""
+        if not user.email:
+            return False
+
+        action_url = f"{cls._get_base_url()}/projects"
+        subject = f"Reminder: {task_title}"
+        if project_name:
+            subject += f" ({project_name})"
+
+        html = render_template(
+            "task_reminder.html",
+            {
+                "subject": subject,
+                "user_name": user.full_name or user.username,
+                "task_title": task_title,
+                "project_name": project_name,
+                "due_date": due_date,
+                "scheduled_time": scheduled_time,
+                "description": description,
+                "task_url": action_url,
+                "portal_url": action_url,
+            },
+        )
+        return await send_email(user.email, subject, html)
+

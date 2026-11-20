@@ -10,6 +10,16 @@ from app.models.activity_log import ActivityLog, ActionType
 from app.models.system_setting import SystemSetting
 from app.models.ai_task_log import AITaskLog, AITaskStatus, AITaskTrigger
 from app.models.ai_chat import AIChatSession, AIChatMessage
+from app.models.audit import AuditLog
+from app.models.project import (
+    Project,
+    ProjectStatus,
+    BillingType,
+    ProjectTask,
+    ProjectTaskStatus,
+    ProjectTaskFile,
+    LeadPriority,
+)
 
 __all__ = [
     "BaseModel",
@@ -35,4 +45,12 @@ __all__ = [
     "AITaskTrigger",
     "AIChatSession",
     "AIChatMessage",
+    "AuditLog",
+    "Project",
+    "ProjectStatus",
+    "BillingType",
+    "ProjectTask",
+    "ProjectTaskStatus",
+    "ProjectTaskFile",
+    "LeadPriority",
 ]

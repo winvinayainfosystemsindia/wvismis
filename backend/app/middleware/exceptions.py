@@ -1,0 +1,147 @@
+"""Centralized application exceptions - Industry Standard"""
+
+import re
+from typing import Any
+
+class AppError(Exception):
+    """Base application exception class that maps to an HTTP status code"""
+    status_code: int = 500
+    message: str = "An unexpected error occurred"
+    error_code: str = "INTERNAL_SERVER_ERROR"
+
+    def __init__(self, message: str | None = None, detail: Any = None, error_code: str | None = None):
+        super().__init__(message or self.message)
+        if message:
+            self.message = message
+        self.detail = detail
+        
+        # Determine error_code
+        if error_code:
+            self.error_code = error_code
+        else:
+            # Generate a clean code from class name (e.g. NotFoundError -> NOT_FOUND)
+            class_name = self.__class__.__name__
+            decamel_name = re.sub(r'(?<!^)(?=[A-Z])', '_', class_name).upper()
+            if decamel_name.endswith("_ERROR"):
+                decamel_name = decamel_name[:-6]
+            self.error_code = decamel_name
+
+
+# --- Client Errors (4xx) ---
+
+class BadRequestError(AppError):
+    """Bad request exception (HTTP 400)"""
+    status_code: int = 400
+    message: str = "Bad request"
+
+
+class UnauthorizedError(AppError):
+    """Authentication failed exception (HTTP 401)"""
+    status_code: int = 401
+    message: str = "Not authenticated"
+
+
+class ForbiddenError(AppError):
+    """Authorization failed exception (HTTP 403)"""
+    status_code: int = 403
+    message: str = "Permission denied"
+
+
+class NotFoundError(AppError):
+    """Resource not found exception (HTTP 404)"""
+    status_code: int = 404
+    message: str = "Resource not found"
+
+
+class MethodNotAllowedError(AppError):
+    """HTTP method not allowed exception (HTTP 405)"""
+    status_code: int = 405
+    message: str = "Method not allowed"
+
+
+class ConflictError(AppError):
+    """Resource conflict/duplicate exception (HTTP 409)"""
+    status_code: int = 409
+    message: str = "Resource conflict"
+
+
+class GoneError(AppError):
+    """Resource no longer available exception (HTTP 410)"""
+    status_code: int = 410
+    message: str = "Resource has been permanently deleted"
+
+
+class PayloadTooLargeError(AppError):
+    """Uploaded payload exceeds the allowed size (HTTP 413)"""
+    status_code: int = 413
+    message: str = "Uploaded file exceeds the maximum allowed size"
+
+
+class ValidationError(AppError):
+    """Pydantic validation/input error wrapper (HTTP 422)"""
+    status_code: int = 422
+    message: str = "Validation failed for request parameters"
+
+
+class RateLimitError(AppError):
+    """Too many requests exception (HTTP 429)"""
+    status_code: int = 429
+    message: str = "Rate limit exceeded. Please try again later."
+
+
+class AICreditsExhaustedError(RateLimitError):
+    """Organization's AI credits for the current billing period are exhausted (HTTP 429).
+
+    Subclasses RateLimitError to keep existing 429 handling, but carries its own error_code
+    (AI_CREDITS_EXHAUSTED) so the frontend can distinguish "buy more / upgrade" from generic
+    rate limiting and show the right prompt.
+    """
+    message: str = (
+        "Your organization's AI credits for this billing period are exhausted. "
+        "Upgrade your plan or wait for the next reset."
+    )
+
+
+# --- Server Errors (5xx) ---
+
+class InternalServerError(AppError):
+    """Internal server error exception (HTTP 500)"""
+    status_code: int = 500
+    message: str = "Internal server error"
+
+
+class FeatureNotImplementedError(AppError):
+    """Functionality not implemented exception (HTTP 501)"""
+    status_code: int = 501
+    message: str = "Requested functionality is not implemented"
+
+
+class ServiceUnavailableError(AppError):
+    """Service temporarily unavailable exception (HTTP 503)"""
+    status_code: int = 503
+    message: str = "Service is temporarily unavailable"
+
+
+class AIServiceUnavailableError(ServiceUnavailableError):
+    """Raised when the primary AI provider AND its configured fallback both fail (HTTP 503) --
+    i.e. every key on every configured provider has been exhausted (Groq's 3 keys, then Gemini).
+
+    Distinct from AICreditsExhaustedError: this means the AI infrastructure itself is down
+    (rate-limited/erroring on every configured provider), not that the org is out of credits.
+
+    The user-facing `message` is deliberately soft/in-context rather than a raw "service down"
+    banner -- callers that need the full diagnostic picture (which providers/keys were tried,
+    with what errors) should read `detail["errors"]`, not this message, and log/alert on it
+    separately (see resilient.py and chat_service.py's full-exhaustion handling).
+    """
+    message: str = "IRIS is taking a little longer than usual to respond. Please try again in a moment."
+
+    def __init__(
+        self,
+        primary: str | None = None,
+        fallback: str | None = None,
+        errors: dict[str, str] | None = None,
+        **kwargs,
+    ):
+        detail = {"primary_provider": primary, "fallback_provider": fallback, "errors": errors or {}}
+        super().__init__(detail=detail, **kwargs)

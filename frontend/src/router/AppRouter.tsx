@@ -32,6 +32,9 @@ import TermsPage from '../pages/common/TermsPage';
 import CookiePolicyPage from '../pages/common/CookiePolicyPage';
 import BillingSettings from '../pages/settings/BillingSettings';
 import AICreditsUsagePage from '../pages/settings/AICreditsUsagePage';
+import ProjectsListPage from '../pages/projects/ProjectsListPage';
+import ProjectDetailPage from '../pages/projects/ProjectDetailPage';
+import ProjectStatusPage from '../pages/projects/public/ProjectStatusPage';
 import { Navigate, useLocation } from './tanstackCompat';
 
 const LegacyAuthRedirect: React.FC<{ to: string }> = ({ to }) => {
@@ -205,6 +208,13 @@ const organizationsRoute = createRoute({
 });
 const [billingRoute, orgBillingRoute] = createAppAndTenantRoutes('/billing', BillingSettings);
 const [aiUsageRoute, orgAiUsageRoute] = createAppAndTenantRoutes('/ai-usage', AICreditsUsagePage);
+const [projectsRoute, orgProjectsRoute] = createAppAndTenantRoutes('/projects', ProjectsListPage);
+const [projectDetailRoute, orgProjectDetailRoute] = createAppAndTenantRoutes('/projects/$projectId', ProjectDetailPage);
+const publicProjectStatusRoute = createRoute({
+	getParentRoute: () => rootRoute,
+	path: '/projects/status/$token',
+	component: ProjectStatusPage,
+});
 const [settingsRoute, orgSettingsRoute] = createAppAndTenantRoutes('/settings', SettingsLayout);
 const [accountSettingsRoute, orgAccountSettingsRoute] = createAppAndTenantRoutes(
 	'/account-settings',
@@ -231,12 +241,17 @@ const routeTree = rootRoute.addChildren([
 	privacyPolicyRoute,
 	termsRoute,
 	cookiesRoute,
+	publicProjectStatusRoute,
 	protectedLayoutRoute.addChildren([
 		mainLayoutRoute.addChildren([
 			dashboardRoute,
 			orgDashboardRoute,
 			usersRoute,
 			orgUsersRoute,
+			projectsRoute,
+			orgProjectsRoute,
+			projectDetailRoute,
+			orgProjectDetailRoute,
 			organizationsRoute,
 			billingRoute,
 			orgBillingRoute,

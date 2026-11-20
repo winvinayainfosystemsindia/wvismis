@@ -1,0 +1,153 @@
+"""Currency conversion for display purposes — converts a Deal/Lead's own recorded value into
+a viewer's preferred currency using the exchange rate on the day the record was created.
+
+This never mutates the record's actual recorded value/currency; it only attaches transient
+`display_value`/`display_currency` attributes that the response schema picks up (mirrors
+`CRMDealResponse`'s existing `_attach_task_counts` transient-attribute pattern)."""
+
+from datetime import date
+from decimal import Decimal, InvalidOperation
+from typing import Optional
+import httpx
+from loguru import logger
+from sqlalchemy.ext.asyncio import AsyncSession
+
+_RATE_CACHE: dict[tuple[str, str, date], Decimal] = {}
+
+# fawazahmed0/currency-api — free, keyless, full ISO 4217 coverage (including e.g. BHD/KWD/AED,
+# which the ECB-only Frankfurter API doesn't publish) with historical data by date. Two mirrors
+# are tried in order since the jsdelivr CDN occasionally rate-limits.
+CURRENCY_API_URLS = [
+    "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@{date}/v1/currencies/{from_currency}.json",
+    "https://{date}.currency-api.pages.dev/v1/currencies/{from_currency}.json",
+]
+
+
+class CurrencyConversionService:
+    @staticmethod
+    async def _fetch_rate_from_api(*, from_currency: str, to_currency: str, on_date: date) -> Optional[Decimal]:
+        from_lower = from_currency.lower()
+        to_lower = to_currency.lower()
+        date_str = on_date.isoformat()
+
+        # The dated release for "today" (and sometimes the last day or two) frequently
+        # 404s because upstream publishes each day's snapshot with a delay — "latest"
+        # always resolves to whatever snapshot is newest, so it's tried as a fallback
+        # whenever the exact date isn't available yet rather than giving up entirely.
+        date_candidates = [date_str] if date_str == "latest" else [date_str, "latest"]
+
+        # Only the dated candidate failing to publish yet is expected/routine — logged at
+        # debug so it doesn't read as an ongoing error every time "today" isn't up yet.
+        # Exhausting every candidate (including "latest") is the real failure worth a warning.
+        for date_candidate in date_candidates:
+            is_expected_miss = date_candidate == date_str and "latest" in date_candidates
+            log = logger.debug if is_expected_miss else logger.warning
+            for url_template in CURRENCY_API_URLS:
+                url = url_template.format(date=date_candidate, from_currency=from_lower)
+                try:
+                    async with httpx.AsyncClient(timeout=5.0) as client:
+                        resp = await client.get(url)
+                        if not resp.is_success:
+                            log(f"Currency rate lookup failed ({from_currency}->{to_currency} on {on_date}) via {url}: {resp.status_code}")
+                            continue
+                        data = resp.json()
+                        raw_rate = data.get(from_lower, {}).get(to_lower)
+                        if raw_rate is None:
+                            log(f"Currency rate lookup missing pair ({from_currency}->{to_currency} on {on_date}) via {url}")
+                            continue
+                        return Decimal(str(raw_rate))
+                except (httpx.HTTPError, InvalidOperation, ValueError) as exc:
+                    log(f"Currency rate lookup errored ({from_currency}->{to_currency} on {on_date}) via {url}: {exc}")
+                    continue
+
+        logger.warning(f"Currency rate lookup exhausted all sources ({from_currency}->{to_currency} on {on_date}) — no rate available.")
+        return None
+
+    @staticmethod
+    async def get_rate(db: AsyncSession, *, from_currency: str, to_currency: str, on_date: date) -> Optional[Decimal]:
+        if from_currency == to_currency:
+            return Decimal("1")
+
+        key = (from_currency.upper(), to_currency.upper(), on_date)
+        if key in _RATE_CACHE:
+            return _RATE_CACHE[key]
+
+        rate = await CurrencyConversionService._fetch_rate_from_api(from_currency=from_currency, to_currency=to_currency, on_date=on_date)
+        if rate is not None:
+            _RATE_CACHE[key] = rate
+        return rate
+
+    @staticmethod
+    async def attach_display_value(
+        db: AsyncSession,
+        obj,
+        *,
+        value_field: str,
+        currency_field: str,
+        user_currency: Optional[str],
+    ) -> None:
+        """Sets transient `display_value`/`display_currency`/`display_rate` on `obj` in place.
+        No-ops (leaves all None) when there's nothing to convert — unset preference, no recorded
+        value, or the record is already in the viewer's preferred currency."""
+        obj.display_value = None
+        obj.display_currency = None
+        obj.display_rate = None
+
+        if not user_currency:
+            return
+
+        record_currency = getattr(obj, currency_field, None)
+        record_value = getattr(obj, value_field, None)
+        if not record_currency or record_value is None or record_currency == user_currency:
+            return
+
+        on_date = None
+        created_at = getattr(obj, "created_at", None)
+
+        entity_type = None
+        field_name = None
+        if obj.__class__.__name__ == "CRMDeal":
+            entity_type = "deal"
+            field_name = "value"
+        elif obj.__class__.__name__ == "CRMLead":
+            entity_type = "lead"
+            field_name = "estimated_value"
+        elif obj.__class__.__name__ == "Project":
+            entity_type = "project"
+            field_name = "budget"
+            on_date = date.today()
+
+        if entity_type and field_name and hasattr(obj, "id") and on_date is None:
+            from app.repositories.audit import AuditLogRepository
+            latest_change = await AuditLogRepository.get_latest_field_change(
+                db, entity_type=entity_type, entity_id=obj.id, field_name=field_name,
+            )
+            if latest_change:
+                on_date = latest_change.changed_at.date()
+
+        if on_date is None:
+            on_date = created_at.date() if created_at else date.today()
+
+        rate = await CurrencyConversionService.get_rate(
+            db, from_currency=record_currency, to_currency=user_currency, on_date=on_date,
+        )
+        if rate is None:
+            return
+
+        obj.display_value = round(float(Decimal(str(record_value)) * rate), 2)
+        obj.display_currency = user_currency
+        obj.display_rate = float(rate)
+
+    @staticmethod
+    async def attach_display_values(
+        db: AsyncSession,
+        objs: list,
+        *,
+        value_field: str,
+        currency_field: str,
+        user_currency: Optional[str],
+    ) -> None:
+        for obj in objs:
+            await CurrencyConversionService.attach_display_value(
+                db, obj, value_field=value_field, currency_field=currency_field, user_currency=user_currency,
+            )

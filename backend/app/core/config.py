@@ -138,6 +138,18 @@ class Settings(BaseSettings):
     AI_APPROVAL_RECORD_THRESHOLD: int = 5
     AI_LOG_RETENTION_DAYS: int = 90
 
+    # Upload Settings
+    MAX_UPLOAD_FILE_SIZE_BYTES: int = 10 * 1024 * 1024
+    ALLOWED_UPLOAD_MIME_TYPES: list[str] = [
+        "application/pdf",
+        "image/jpeg",
+        "image/png",
+        "image/gif",
+        "image/webp",
+        "text/plain",
+        "application/zip",
+    ]
+
     model_config = SettingsConfigDict(
         env_file=_resolve_env_file(),
         env_file_encoding="utf-8",

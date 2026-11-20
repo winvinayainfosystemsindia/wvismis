@@ -2,6 +2,7 @@ import {
 	Home as HomeIcon,
 	ManageAccounts as UserIcon,
 	CorporateFare as OrgIcon,
+	ViewKanban as ProjectsIcon,
 	Person as ProfileIcon,
 	Tune as PreferencesIcon,
 	Shield as SecurityIcon,
@@ -39,6 +40,12 @@ export const topNavigation: NavigationItem[] = [
 				path: '/users',
 				icon: UserIcon,
 				roles: ['admin', 'org_admin', 'super_admin'],
+			},
+			{
+				label: 'Projects',
+				path: '/projects',
+				icon: ProjectsIcon,
+				roles: ['admin', 'manager', 'project_coordinator', 'developer'],
 			},
 			{
 				label: 'Billing',

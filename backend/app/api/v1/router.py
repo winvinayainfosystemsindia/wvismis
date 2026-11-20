@@ -12,6 +12,7 @@ from app.api.v1.endpoints import (
     ai_settings,
     ai_chat,
     frontend_compat,
+    projects,
 )
 
 router = APIRouter()
@@ -26,6 +27,10 @@ router.include_router(frontend_compat.router)
 
 # Real-Time WebSockets & Data Streaming
 router.include_router(websockets.router)
+
+# Project Management & Tasks
+router.include_router(projects.router)
+router.include_router(projects.router_tasks)
 
 # AI Credits, Usage & Agentic Harness
 router.include_router(ai.router)

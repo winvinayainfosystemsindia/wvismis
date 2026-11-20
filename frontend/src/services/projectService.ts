@@ -1,0 +1,237 @@
+import api from './api';
+import type { PaginatedResponse } from '../models/common';
+import type { Project, ProjectCreate, ProjectUpdate, ProjectStatus, ProjectStats, ProjectBudgetActuals, ProjectShareLink, PublicProject } from '../models/projects/project';
+import type {
+	ProjectTask,
+	ProjectTaskCreate,
+	ProjectTaskUpdate,
+	ProjectTaskStatus,
+	ProjectTaskStatusUpsert,
+	ProjectTaskFile,
+	ProjectTaskHistoryEntry,
+	IrisPreviewResponse,
+	TaskInsight,
+	TaskEstimate,
+} from '../models/projects/projectTask';
+
+const projectService = {
+	// --- Projects ---
+	listProjects: async (params: {
+		page?: number;
+		pageSize?: number;
+		search?: string;
+		status?: ProjectStatus | string;
+		ownerId?: number;
+		companyId?: number;
+		assignedToMe?: boolean;
+		excludeCompleted?: boolean;
+	} = {}): Promise<PaginatedResponse<Project>> => {
+		const { page = 1, pageSize = 20, search, status, ownerId, companyId, assignedToMe, excludeCompleted } = params;
+		const response = await api.get<PaginatedResponse<Project>>('/projects', {
+			params: {
+				page,
+				page_size: pageSize,
+				search,
+				status,
+				owner_id: ownerId,
+				company_id: companyId,
+				assigned_to_me: assignedToMe,
+				exclude_completed: excludeCompleted,
+			},
+		});
+		return response.data;
+	},
+
+	getProjectStats: async (): Promise<ProjectStats> => {
+		const response = await api.get<ProjectStats>('/projects/stats');
+		return response.data;
+	},
+
+	getProject: async (publicId: string): Promise<Project> => {
+		const response = await api.get<Project>(`/projects/${publicId}`);
+		return response.data;
+	},
+
+	getProjectBudgetActuals: async (publicId: string): Promise<ProjectBudgetActuals> => {
+		const response = await api.get<ProjectBudgetActuals>(`/projects/${publicId}/budget-actuals`);
+		return response.data;
+	},
+
+	createProject: async (payload: ProjectCreate): Promise<Project> => {
+		const response = await api.post<Project>('/projects', payload);
+		return response.data;
+	},
+
+	updateProject: async (publicId: string, payload: ProjectUpdate): Promise<Project> => {
+		const response = await api.patch<Project>(`/projects/${publicId}`, payload);
+		return response.data;
+	},
+
+	deleteProject: async (publicId: string): Promise<void> => {
+		await api.delete(`/projects/${publicId}`);
+	},
+
+	// --- Client-facing share link ---
+	getShareLink: async (publicId: string): Promise<ProjectShareLink> => {
+		const response = await api.get<ProjectShareLink>(`/projects/${publicId}/share-link`);
+		return response.data;
+	},
+
+	enableShareLink: async (publicId: string): Promise<ProjectShareLink> => {
+		const response = await api.post<ProjectShareLink>(`/projects/${publicId}/share-link`);
+		return response.data;
+	},
+
+	regenerateShareLink: async (publicId: string): Promise<ProjectShareLink> => {
+		const response = await api.post<ProjectShareLink>(`/projects/${publicId}/share-link/regenerate`);
+		return response.data;
+	},
+
+	disableShareLink: async (publicId: string): Promise<ProjectShareLink> => {
+		const response = await api.delete<ProjectShareLink>(`/projects/${publicId}/share-link`);
+		return response.data;
+	},
+
+	/** Public (no-login) client status page — token identifies the project. */
+	publicGetProject: async (token: string): Promise<PublicProject> => {
+		const response = await api.get<PublicProject>(`/projects/public/${token}`);
+		return response.data;
+	},
+
+	bulkUpdateProjects: async (publicIds: string[], updates: { ownerId?: number; status?: ProjectStatus }): Promise<Project[]> => {
+		const response = await api.patch<Project[]>('/projects/bulk', {
+			public_ids: publicIds,
+			owner_id: updates.ownerId,
+			status: updates.status,
+		});
+		return response.data;
+	},
+
+	// --- Project Tasks (and sub-tasks) ---
+	listProjectTasks: async (
+		projectPublicId: string,
+		params: { assignedToMe?: boolean; excludeDone?: boolean } = {}
+	): Promise<ProjectTask[]> => {
+		const { assignedToMe, excludeDone } = params;
+		const response = await api.get<ProjectTask[]>(`/projects/${projectPublicId}/tasks`, {
+			params: { assigned_to_me: assignedToMe, exclude_done: excludeDone },
+		});
+		return response.data;
+	},
+
+	createProjectTask: async (projectPublicId: string, payload: ProjectTaskCreate): Promise<ProjectTask> => {
+		const response = await api.post<ProjectTask>(`/projects/${projectPublicId}/tasks`, payload);
+		return response.data;
+	},
+
+	createSubtask: async (parentTaskPublicId: string, payload: ProjectTaskCreate): Promise<ProjectTask> => {
+		const response = await api.post<ProjectTask>(`/project-tasks/${parentTaskPublicId}/subtasks`, payload);
+		return response.data;
+	},
+
+	updateProjectTask: async (taskPublicId: string, payload: ProjectTaskUpdate): Promise<ProjectTask> => {
+		const response = await api.patch<ProjectTask>(`/project-tasks/${taskPublicId}`, payload);
+		return response.data;
+	},
+
+	deleteProjectTask: async (taskPublicId: string): Promise<void> => {
+		await api.delete(`/project-tasks/${taskPublicId}`);
+	},
+
+	getTaskHistory: async (taskPublicId: string, page = 1, pageSize = 50): Promise<PaginatedResponse<ProjectTaskHistoryEntry>> => {
+		const response = await api.get<PaginatedResponse<ProjectTaskHistoryEntry>>(`/project-tasks/${taskPublicId}/history`, {
+			params: { page, page_size: pageSize },
+		});
+		return response.data;
+	},
+
+	// --- Task Statuses (per-project — scoped to /projects/{id}/task-statuses) ---
+	listTaskStatuses: async (projectPublicId: string): Promise<ProjectTaskStatus[]> => {
+		const response = await api.get<ProjectTaskStatus[]>(`/projects/${projectPublicId}/task-statuses`);
+		return response.data;
+	},
+
+	updateTaskStatuses: async (projectPublicId: string, statuses: ProjectTaskStatusUpsert[]): Promise<ProjectTaskStatus[]> => {
+		const response = await api.patch<ProjectTaskStatus[]>(`/projects/${projectPublicId}/task-statuses`, { statuses });
+		return response.data;
+	},
+
+	// --- Task File Attachments ---
+	listTaskFiles: async (taskPublicId: string): Promise<ProjectTaskFile[]> => {
+		const response = await api.get<ProjectTaskFile[]>(`/project-tasks/${taskPublicId}/files`);
+		return response.data;
+	},
+
+	uploadTaskFile: async (taskPublicId: string, file: File): Promise<ProjectTaskFile> => {
+		const formData = new FormData();
+		formData.append('file', file);
+		const response = await api.post<ProjectTaskFile>(`/project-tasks/${taskPublicId}/files`, formData, {
+			headers: { 'Content-Type': 'multipart/form-data' },
+		});
+		return response.data;
+	},
+
+	deleteTaskFile: async (taskPublicId: string, filePublicId: string): Promise<void> => {
+		await api.delete(`/project-tasks/${taskPublicId}/files/${filePublicId}`);
+	},
+
+	viewTaskFile: async (taskPublicId: string, filePublicId: string): Promise<void> => {
+		const response = await api.get(`/project-tasks/${taskPublicId}/files/${filePublicId}/download`, {
+			responseType: 'blob',
+		});
+		const blob = new Blob([response.data], { type: (response.headers['content-type'] as string) || undefined });
+		const viewUrl = window.URL.createObjectURL(blob);
+		// Opened as a real tab (not a popup) so the browser's native viewer (images, PDFs)
+		// takes over; the object URL is revoked after a delay to give that tab time to load it.
+		window.open(viewUrl, '_blank', 'noopener,noreferrer');
+		setTimeout(() => window.URL.revokeObjectURL(viewUrl), 60_000);
+	},
+
+	downloadTaskFile: async (taskPublicId: string, filePublicId: string, fileName: string): Promise<void> => {
+		const response = await api.get(`/project-tasks/${taskPublicId}/files/${filePublicId}/download`, {
+			responseType: 'blob',
+		});
+		const blob = new Blob([response.data], { type: (response.headers['content-type'] as string) || undefined });
+		const downloadUrl = window.URL.createObjectURL(blob);
+		const link = document.createElement('a');
+		link.href = downloadUrl;
+		link.download = fileName;
+		document.body.appendChild(link);
+		link.click();
+		link.remove();
+		window.URL.revokeObjectURL(downloadUrl);
+	},
+
+	createTaskComment: async (taskPublicId: string, content: string): Promise<ProjectTaskHistoryEntry> => {
+		const response = await api.post<ProjectTaskHistoryEntry>(`/project-tasks/${taskPublicId}/comments`, { content });
+		return response.data;
+	},
+
+	// --- IRIS task assist ---
+	previewIrisAction: async (taskPublicId: string, message: string): Promise<IrisPreviewResponse> => {
+		const response = await api.post<IrisPreviewResponse>(`/project-tasks/${taskPublicId}/iris/preview`, { message });
+		return response.data;
+	},
+
+	executeIrisAction: async (taskPublicId: string, message: string): Promise<ProjectTaskHistoryEntry> => {
+		const response = await api.post<ProjectTaskHistoryEntry>(`/project-tasks/${taskPublicId}/iris/execute`, { message });
+		return response.data;
+	},
+
+	getTaskInsights: async (taskPublicId: string): Promise<TaskInsight> => {
+		const response = await api.get<TaskInsight>(`/project-tasks/${taskPublicId}/iris/insights`);
+		return response.data;
+	},
+
+	estimateTaskHours: async (taskPublicId: string): Promise<TaskEstimate> => {
+		const response = await api.post<TaskEstimate>(`/project-tasks/${taskPublicId}/iris/estimate`);
+		return response.data;
+	},
+
+	enhanceDescription: async (text: string, mode: 'improve' | 'fix_typos' | 'expand' = 'improve'): Promise<string> => {
+		const response = await api.post<{ enhanced_text: string }>('/ai/description/enhance', { text, mode });
+		return response.data.enhanced_text;
+	},
+};
+
+export default projectService;

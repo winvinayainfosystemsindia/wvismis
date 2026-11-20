@@ -1,0 +1,785 @@
+"""Project Management business logic services layer"""
+
+import uuid
+from datetime import datetime, timezone, date as date_type
+from decimal import Decimal
+from typing import Any, Optional
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.future import select
+
+from app.models.project import Project, ProjectTask, ProjectTaskStatus, ProjectTaskFile
+from app.models.organization import Organization
+from app.repositories.project import (
+    ProjectRepository,
+    ProjectTaskRepository,
+    ProjectTaskStatusRepository,
+    ProjectTaskFileRepository,
+)
+from app.repositories.audit import AuditLogRepository
+from app.schemas.project import (
+    ProjectCreate,
+    ProjectUpdate,
+    ProjectTaskCreate,
+    ProjectTaskUpdate,
+    ProjectTaskStatusUpsert,
+    DealConvertToProjectRequest,
+    DealProjectConversionPreview,
+    PublicProjectView,
+    PublicProjectTaskView,
+)
+from app.models.user import User
+from app.services.audit import AuditService
+from app.services.currency import CurrencyConversionService
+from app.middleware.exceptions import NotFoundError, BadRequestError, ConflictError
+from app.core.context import tenant_context
+from app.services.project_templates import PROJECT_TEMPLATES
+from app.services.project_stage_presets import get_stage_preset_for_template
+
+
+class ProjectService:
+    # --- Task status seeding & configuration ---
+    @staticmethod
+    async def seed_project_task_statuses(
+        db: AsyncSession, project: Project, template_key: Optional[str] = None
+    ) -> list[ProjectTaskStatus]:
+        """Seed a new project's own task-status board — the category preset matching
+        its template, or the generic default set if it has none (or an unmatched one)."""
+        existing = await ProjectTaskStatusRepository.list_by_project(db, project_id=project.id)
+        if existing:
+            return existing
+
+        preset = get_stage_preset_for_template(template_key)
+        created = []
+        for s in preset:
+            created.append(
+                await ProjectTaskStatusRepository.create(
+                    db,
+                    name=s["name"],
+                    order=s["order"],
+                    color=s["color"],
+                    is_initial_status=s.get("is_initial_status", False),
+                    is_done_status=s.get("is_done_status", False),
+                    project_id=project.id,
+                )
+            )
+        return created
+
+    @staticmethod
+    async def update_task_statuses(
+        db: AsyncSession, project_id: int, statuses: list[ProjectTaskStatusUpsert]
+    ) -> list[ProjectTaskStatus]:
+        """Create, update, reorder, and delete a single project's task statuses in one call.
+
+        Any existing status whose id is not present in `statuses` is deleted. Resetting to
+        the linked template's defaults replaces the whole list wholesale (every incoming row
+        is brand-new, with no id) — so any status that already has tasks on it would otherwise
+        always hit the FK constraint. Rather than reject the save outright, tasks on a
+        removed status are moved to the incoming list's initial status (or its first row)
+        before that status is deleted.
+        """
+        existing = await ProjectTaskStatusRepository.list_by_project(db, project_id=project_id)
+        existing_by_id = {status.id: status for status in existing}
+        keep_ids = {s.id for s in statuses if s.id is not None}
+
+        # Create/update first so a reassignment target exists before any deletion.
+        saved: list[ProjectTaskStatus] = []
+        for s in statuses:
+            data = s.model_dump(exclude={"id"})
+            if s.id is not None and s.id in existing_by_id:
+                saved.append(await ProjectTaskStatusRepository.update(db, existing_by_id[s.id], **data))
+            else:
+                saved.append(await ProjectTaskStatusRepository.create(db, project_id=project_id, **data))
+
+        fallback_status = next((s for s in saved if s.is_initial_status), saved[0] if saved else None)
+
+        for status_id, status in existing_by_id.items():
+            if status_id not in keep_ids:
+                status_name = status.name
+                if fallback_status is not None:
+                    await ProjectTaskRepository.reassign_status(
+                        db, from_status_id=status_id, to_status_id=fallback_status.id
+                    )
+                try:
+                    await ProjectTaskStatusRepository.delete(db, status)
+                except IntegrityError:
+                    await db.rollback()
+                    raise ConflictError(
+                        f"Cannot delete status '{status_name}' — it still has tasks assigned to it."
+                    )
+
+        return await ProjectTaskStatusRepository.list_by_project(db, project_id=project_id)
+
+    @staticmethod
+    async def check_project_limit(db: AsyncSession, organization_id: int) -> None:
+        from app.repositories.organization import OrganizationRepository
+        from app.models.plan import PlanTier
+
+        org = await OrganizationRepository.get_by_id(db, organization_id)
+        if not org:
+            return
+
+        account_type = org.others.get("account_type", "individual") if org.others else "individual"
+        tier = org.plan.tier if org.plan else PlanTier.FREE
+
+        # Define limits:
+        # individual: free=2, basic=5, pro=unlimited, enterprise=unlimited
+        # organization: free=5, basic=20, pro=unlimited, enterprise=unlimited
+        limits = {
+            "individual": {
+                PlanTier.FREE: 2,
+                PlanTier.BASIC: 5,
+            },
+            "organization": {
+                PlanTier.FREE: 5,
+                PlanTier.BASIC: 20,
+            }
+        }
+
+        limit = limits.get(account_type, {}).get(tier)
+        if limit is not None:
+            _, total_active_projects = await ProjectRepository.list_all(db, page=1, page_size=1)
+            if total_active_projects >= limit:
+                plan_names = {
+                    "individual": {PlanTier.FREE: "Solo Trial", PlanTier.BASIC: "Solo Standard"},
+                    "organization": {PlanTier.FREE: "Team Trial", PlanTier.BASIC: "Starter Plan"}
+                }
+                plan_name = plan_names.get(account_type, {}).get(tier, "your plan")
+                raise BadRequestError(
+                    f"You have reached the maximum project limit of {limit} projects on your {plan_name}. "
+                    f"Please upgrade to create more projects."
+                )
+
+    # --- Project CRUD ---
+    @staticmethod
+    async def get_project(db: AsyncSession, public_id: uuid.UUID) -> Project:
+        project = await ProjectRepository.get_by_public_id(db, public_id)
+        if not project or project.is_deleted:
+            raise NotFoundError("Project not found")
+        return project
+
+    @staticmethod
+    async def create_project(
+        db: AsyncSession, payload: ProjectCreate, current_user: Optional[User] = None,
+    ) -> Project:
+        org_id = tenant_context.get()
+        if org_id is not None:
+            await ProjectService.check_project_limit(db, org_id)
+
+        data = payload.model_dump()
+        template_key = data.get("template_key")
+        custom_tasks = data.pop("custom_tasks", None)
+        custom_stages = data.pop("custom_stages", None)
+
+        project = await ProjectRepository.create(db, **data)
+
+        if custom_stages:
+            for idx, s in enumerate(custom_stages):
+                await ProjectTaskStatusRepository.create(
+                    db,
+                    name=s["name"],
+                    order=s.get("order", idx),
+                    color=s.get("color", "#808080"),
+                    is_initial_status=s.get("is_initial_status", False),
+                    is_done_status=s.get("is_done_status", False),
+                    custom_fields=s.get("custom_fields"),
+                    project_id=project.id,
+                )
+        else:
+            await ProjectService.seed_project_task_statuses(db, project, template_key)
+
+        if custom_tasks:
+            await ProjectService.seed_project_tasks_custom(db, project, custom_tasks, current_user)
+        elif template_key:
+            await ProjectService.seed_project_tasks_from_template(db, project, template_key, current_user)
+
+        await db.flush()
+        refetched = await ProjectRepository.get_by_public_id(db, project.public_id)
+        return refetched if refetched else project
+
+    @staticmethod
+    async def update_project(db: AsyncSession, public_id: uuid.UUID, payload: ProjectUpdate) -> Project:
+        project = await ProjectService.get_project(db, public_id)
+        data = payload.model_dump(exclude_unset=True)
+        return await ProjectRepository.update(db, project, **data)
+
+    @staticmethod
+    async def delete_project(db: AsyncSession, public_id: uuid.UUID) -> None:
+        project = await ProjectService.get_project(db, public_id)
+        await ProjectRepository.delete(db, project)
+
+    @staticmethod
+    async def list_projects(
+        db: AsyncSession,
+        *,
+        status: Optional[str] = None,
+        owner_id: Optional[int] = None,
+        company_id: Optional[int] = None,
+        page: int = 1,
+        page_size: int = 20,
+        search: Optional[str] = None,
+        assigned_to_me_user_id: Optional[int] = None,
+        exclude_completed: bool = False,
+    ) -> tuple[list[Project], int]:
+        return await ProjectRepository.list_all(
+            db,
+            status=status,
+            owner_id=owner_id,
+            company_id=company_id,
+            page=page,
+            page_size=page_size,
+            search=search,
+            assigned_to_me_user_id=assigned_to_me_user_id,
+            exclude_completed=exclude_completed,
+        )
+
+    @staticmethod
+    async def get_stats(db: AsyncSession) -> dict:
+        return await ProjectRepository.get_stats(db)
+
+    @staticmethod
+    async def get_budget_actuals(db: AsyncSession, public_id: uuid.UUID) -> dict:
+        project = await ProjectService.get_project(db, public_id)
+        actuals = await ProjectRepository.get_budget_actuals(db, project_id=project.id)
+
+        estimated_hours_total = actuals["estimated_hours_total"]
+        # "Actual" hours = manager-approved only -- draft/submitted entries haven't
+        # been signed off yet, so they're kept separate as "pending" rather than
+        # counted toward spend (a week can still be rejected after submission).
+        billable_hours_logged = actuals["billable_hours_logged"]
+        non_billable_hours_logged = actuals["non_billable_hours_logged"]
+        actual_hours_logged_total = billable_hours_logged + non_billable_hours_logged
+        billable_hours_pending = actuals["billable_hours_pending"]
+        non_billable_hours_pending = actuals["non_billable_hours_pending"]
+        pending_hours_total = billable_hours_pending + non_billable_hours_pending
+
+        hours_utilization_pct = (
+            round(actual_hours_logged_total / estimated_hours_total * 100, 1)
+            if estimated_hours_total > 0 else None
+        )
+
+        # The only hourly rate derivable from existing data: the project's total
+        # estimated effort, priced against its total budget. No per-user or per-task
+        # rate is recorded anywhere, so this is a modeled estimate, not a booked cost.
+        implied_hourly_rate = None
+        estimated_spend = None
+        budget_utilization_pct = None
+        estimated_pending_spend = None
+        if project.budget and estimated_hours_total > 0:
+            budget_float = float(project.budget)
+            implied_hourly_rate = round(budget_float / estimated_hours_total, 2)
+            estimated_spend = round(implied_hourly_rate * billable_hours_logged, 2)
+            budget_utilization_pct = round(estimated_spend / budget_float * 100, 1)
+            estimated_pending_spend = round(implied_hourly_rate * billable_hours_pending, 2)
+
+        return {
+            "project": project,
+            "estimated_hours_total": estimated_hours_total,
+            "billable_hours_logged": billable_hours_logged,
+            "non_billable_hours_logged": non_billable_hours_logged,
+            "actual_hours_logged_total": actual_hours_logged_total,
+            "billable_hours_pending": billable_hours_pending,
+            "non_billable_hours_pending": non_billable_hours_pending,
+            "pending_hours_total": pending_hours_total,
+            "hours_utilization_pct": hours_utilization_pct,
+            "implied_hourly_rate": implied_hourly_rate,
+            "estimated_spend": estimated_spend,
+            "estimated_pending_spend": estimated_pending_spend,
+            "budget_utilization_pct": budget_utilization_pct,
+            "is_over_budget": budget_utilization_pct is not None and budget_utilization_pct > 100,
+        }
+
+    @staticmethod
+    async def bulk_update_projects(
+        db: AsyncSession, public_ids: list[uuid.UUID], owner_id: Optional[int], status: Optional[str],
+    ) -> list[Project]:
+        if owner_id is None and status is None:
+            raise BadRequestError("Provide at least one of owner_id or status to update")
+
+        result = await db.execute(
+            select(Project.id).where(Project.public_id.in_(public_ids), Project.is_deleted.is_(False))
+        )
+        project_ids = [row[0] for row in result.all()]
+        if len(project_ids) != len(set(public_ids)):
+            raise NotFoundError("One or more projects not found")
+
+        updates: dict[str, Any] = {}
+        if owner_id is not None:
+            updates["owner_id"] = owner_id
+        if status is not None:
+            updates["status"] = status
+
+        return await ProjectRepository.bulk_update(db, project_ids, **updates)
+
+    # --- Client-facing share link ---
+    @staticmethod
+    async def get_share_link(db: AsyncSession, public_id: uuid.UUID) -> Project:
+        return await ProjectService.get_project(db, public_id)
+
+    @staticmethod
+    async def enable_share_link(db: AsyncSession, public_id: uuid.UUID) -> Project:
+        """Idempotent: turns sharing on, minting a token only if this project has never
+        been shared before (re-enabling after a disable reuses the same link)."""
+        project = await ProjectService.get_project(db, public_id)
+        updates: dict[str, Any] = {"share_enabled": True}
+        if project.share_token is None:
+            updates["share_token"] = uuid.uuid4()
+        return await ProjectRepository.update(db, project, **updates)
+
+    @staticmethod
+    async def regenerate_share_link(db: AsyncSession, public_id: uuid.UUID) -> Project:
+        """Rotates the token -- this is how a previously-shared link is revoked without
+        turning sharing off altogether."""
+        project = await ProjectService.get_project(db, public_id)
+        return await ProjectRepository.update(db, project, share_token=uuid.uuid4(), share_enabled=True)
+
+    @staticmethod
+    async def disable_share_link(db: AsyncSession, public_id: uuid.UUID) -> Project:
+        project = await ProjectService.get_project(db, public_id)
+        return await ProjectRepository.update(db, project, share_enabled=False)
+
+    @staticmethod
+    async def get_public_project_view(db: AsyncSession, token: uuid.UUID) -> "PublicProjectView":
+        project = await ProjectRepository.get_by_share_token(db, token)
+        if not project or not project.share_enabled:
+            raise NotFoundError("This project link is invalid or is no longer being shared.")
+
+        non_deleted_tasks = [t for t in project.tasks if not t.is_deleted]
+        # Sub-tasks are omitted here -- a client-facing status page shows top-level
+        # work items, not the full internal task/sub-task breakdown.
+        top_level_tasks = sorted(
+            (t for t in non_deleted_tasks if t.parent_task_id is None),
+            key=lambda t: (t.order, t.created_at),
+        )
+
+        return PublicProjectView(
+            name=project.name,
+            description=project.description,
+            status=project.status,
+            start_date=project.start_date,
+            end_date=project.end_date,
+            company_name=project.company.name if project.company else None,
+            task_count=len(non_deleted_tasks),
+            completed_task_count=len([t for t in non_deleted_tasks if t.completed_at is not None]),
+            tasks=[
+                PublicProjectTaskView(
+                    title=t.title,
+                    status_name=t.status.name if t.status else "Unknown",
+                    status_color=t.status.color if t.status else "#808080",
+                    is_done=t.completed_at is not None,
+                    due_date=t.due_date,
+                )
+                for t in top_level_tasks
+            ],
+        )
+
+    # --- Project Task CRUD (also used for sub-tasks) ---
+    @staticmethod
+    async def get_task(db: AsyncSession, public_id: uuid.UUID) -> ProjectTask:
+        task = await ProjectTaskRepository.get_by_public_id(db, public_id)
+        if not task or task.is_deleted:
+            raise NotFoundError("Task not found")
+        return task
+
+    @staticmethod
+    async def list_project_tasks(
+        db: AsyncSession,
+        project_public_id: uuid.UUID,
+        *,
+        assignee_id: Optional[int] = None,
+        exclude_done: bool = False,
+    ) -> list[ProjectTask]:
+        project = await ProjectService.get_project(db, project_public_id)
+        return await ProjectTaskRepository.list_by_project(
+            db, project_id=project.id, assignee_id=assignee_id, exclude_done=exclude_done
+        )
+
+    @staticmethod
+    async def _resolve_status_id(db: AsyncSession, project_id: int, status_id: Optional[int]) -> int:
+        if status_id is not None:
+            status = await ProjectTaskStatusRepository.get_by_id(db, status_id)
+            if not status or status.is_deleted or status.project_id != project_id:
+                raise NotFoundError("Task status not found")
+            return status.id
+        initial = await ProjectTaskStatusRepository.get_initial(db, project_id=project_id)
+        if not initial:
+            raise BadRequestError("This project has no task statuses configured yet.")
+        return initial.id
+
+    @staticmethod
+    async def create_task(
+        db: AsyncSession, project_public_id: uuid.UUID, payload: ProjectTaskCreate,
+        current_user: Optional[User] = None,
+    ) -> ProjectTask:
+        """Creates a top-level task (parent_task_id is always None here)."""
+        project = await ProjectService.get_project(db, project_public_id)
+        data = payload.model_dump()
+        data["status_id"] = await ProjectService._resolve_status_id(db, project.id, data.pop("status_id"))
+        task = await ProjectTaskRepository.create(db, project_id=project.id, parent_task_id=None, **data)
+
+        if current_user:
+            await AuditService.record(
+                db, entity_type="project_task", entity_id=task.id, action="create",
+                changed_by_user_id=current_user.id, field_name="title", new_value=task.title,
+            )
+
+        return task
+
+    @staticmethod
+    async def create_subtask(
+        db: AsyncSession, parent_public_id: uuid.UUID, payload: ProjectTaskCreate,
+        current_user: Optional[User] = None,
+    ) -> ProjectTask:
+        """Creates a sub-task under an existing task -- forces project_id/parent_task_id
+        from the parent regardless of what's in the payload."""
+        parent = await ProjectService.get_task(db, parent_public_id)
+        data = payload.model_dump()
+        data["status_id"] = await ProjectService._resolve_status_id(db, parent.project_id, data.pop("status_id"))
+        task = await ProjectTaskRepository.create(
+            db, project_id=parent.project_id, parent_task_id=parent.id, **data
+        )
+
+        if current_user:
+            await AuditService.record(
+                db, entity_type="project_task", entity_id=parent.id, action="add_subtask",
+                changed_by_user_id=current_user.id, field_name="subtask", new_value=task.title,
+            )
+            await AuditService.record(
+                db, entity_type="project_task", entity_id=task.id, action="create",
+                changed_by_user_id=current_user.id, field_name="title", new_value=task.title,
+            )
+
+        return task
+
+    @staticmethod
+    async def update_task(
+        db: AsyncSession, public_id: uuid.UUID, payload: ProjectTaskUpdate,
+        current_user: Optional[User] = None,
+    ) -> ProjectTask:
+        task = await ProjectService.get_task(db, public_id)
+        data = payload.model_dump(exclude_unset=True)
+
+        # Auto-set completed_at when the task moves into/out of a "done" status,
+        # mirroring CRMService.update_deal_task's status/completed_at handling.
+        if "status_id" in data and data["status_id"] != task.status_id:
+            new_status = await ProjectTaskStatusRepository.get_by_id(db, data["status_id"])
+            if not new_status or new_status.project_id != task.project_id:
+                raise NotFoundError("Task status not found")
+            if new_status.is_done_status:
+                data["completed_at"] = datetime.now(timezone.utc)
+            else:
+                data["completed_at"] = None
+
+        # Snapshot old values for the fields being changed, for history purposes.
+        # "order" (drag-and-drop reordering) and "completed_at" (derived from the
+        # status_id change above, already recorded on its own) are excluded to
+        # avoid flooding the history with noise.
+        NOISY_AUDIT_FIELDS = {"order", "completed_at"}
+        changes = {
+            field: (getattr(task, field), new_val)
+            for field, new_val in data.items()
+            if field not in NOISY_AUDIT_FIELDS and hasattr(task, field) and getattr(task, field) != new_val
+        }
+
+        updated = await ProjectTaskRepository.update(db, task, **data)
+
+        if current_user and changes:
+            await AuditService.record_field_changes(
+                db, entity_type="project_task", entity_id=updated.id, action="update",
+                changed_by_user_id=current_user.id, changes=changes,
+            )
+            # Also roll up each changed field onto the parent's own history so editing
+            # a sub-task (status, description, assignee, etc.) shows the same "from
+            # what to what" detail on the parent task's timeline, not just a generic
+            # "sub-task was updated" note. The sub-task's title is smuggled into
+            # field_name (as "<field>::<subtask title>") since AuditLog has no
+            # dedicated column for it -- the frontend splits it back apart.
+            if updated.parent_task_id is not None:
+                for field_name, (old_val, new_val) in changes.items():
+                    if old_val == new_val:
+                        continue
+                    await AuditService.record(
+                        db, entity_type="project_task", entity_id=updated.parent_task_id, action="update_subtask",
+                        changed_by_user_id=current_user.id, field_name=f"{field_name}::{updated.title}",
+                        old_value=old_val, new_value=new_val,
+                    )
+
+        return updated
+
+    @staticmethod
+    async def delete_task(
+        db: AsyncSession, public_id: uuid.UUID, current_user: Optional[User] = None,
+    ) -> None:
+        task = await ProjectService.get_task(db, public_id)
+
+        if current_user:
+            await AuditService.record(
+                db, entity_type="project_task", entity_id=task.id, action="delete",
+                changed_by_user_id=current_user.id, field_name="title", old_value=task.title,
+            )
+            if task.parent_task_id:
+                await AuditService.record(
+                    db, entity_type="project_task", entity_id=task.parent_task_id, action="remove_subtask",
+                    changed_by_user_id=current_user.id, field_name="subtask", old_value=task.title,
+                )
+
+        await ProjectTaskRepository.delete(db, task)
+
+    # --- Task file attachments ---
+    @staticmethod
+    async def list_task_files(db: AsyncSession, task_public_id: uuid.UUID) -> list[ProjectTaskFile]:
+        task = await ProjectService.get_task(db, task_public_id)
+        return await ProjectTaskFileRepository.list_by_task(db, task_id=task.id)
+
+    @staticmethod
+    async def create_task_file(
+        db: AsyncSession,
+        task_public_id: uuid.UUID,
+        *,
+        file_name: str,
+        file_path: str,
+        file_size: int,
+        mime_type: str,
+        owner_id: Optional[int] = None,
+    ) -> ProjectTaskFile:
+        task = await ProjectService.get_task(db, task_public_id)
+        task_file = await ProjectTaskFileRepository.create(
+            db,
+            task_id=task.id,
+            file_name=file_name,
+            file_path=file_path,
+            file_size=file_size,
+            mime_type=mime_type,
+            owner_id=owner_id,
+        )
+
+        if owner_id:
+            await AuditService.record(
+                db, entity_type="project_task", entity_id=task.id, action="attach_file",
+                changed_by_user_id=owner_id, field_name="file", new_value=file_name,
+            )
+            if task.parent_task_id is not None:
+                await AuditService.record(
+                    db, entity_type="project_task", entity_id=task.parent_task_id, action="subtask_attach_file",
+                    changed_by_user_id=owner_id, field_name=task.title, new_value=file_name,
+                )
+
+        return task_file
+
+    @staticmethod
+    async def get_task_file(db: AsyncSession, task_public_id: uuid.UUID, file_public_id: uuid.UUID) -> ProjectTaskFile:
+        task = await ProjectService.get_task(db, task_public_id)
+        task_file = await ProjectTaskFileRepository.get_by_public_id(db, file_public_id)
+        if not task_file or task_file.is_deleted or task_file.task_id != task.id:
+            raise NotFoundError("File not found")
+        return task_file
+
+    @staticmethod
+    async def delete_task_file(
+        db: AsyncSession, task_public_id: uuid.UUID, file_public_id: uuid.UUID,
+        current_user: Optional[User] = None,
+    ) -> None:
+        task_file = await ProjectService.get_task_file(db, task_public_id, file_public_id)
+
+        import os
+        if os.path.exists(task_file.file_path):
+            try:
+                os.remove(task_file.file_path)
+            except Exception as e:
+                from loguru import logger
+                logger.error(f"Failed to remove file from disk: {e}")
+
+        if current_user:
+            await AuditService.record(
+                db, entity_type="project_task", entity_id=task_file.task_id, action="delete_file",
+                changed_by_user_id=current_user.id, field_name="file", old_value=task_file.file_name,
+            )
+            task = await ProjectService.get_task(db, task_public_id)
+            if task.parent_task_id is not None:
+                await AuditService.record(
+                    db, entity_type="project_task", entity_id=task.parent_task_id, action="subtask_delete_file",
+                    changed_by_user_id=current_user.id, field_name=task.title, old_value=task_file.file_name,
+                )
+
+        await ProjectTaskFileRepository.delete(db, task_file)
+
+    # --- Task history ---
+    @staticmethod
+    async def get_task_history(db: AsyncSession, task_public_id: uuid.UUID, page: int, page_size: int):
+        task = await ProjectService.get_task(db, task_public_id)
+        return await AuditService.list_for_entity(
+            db, entity_type="project_task", entity_id=task.id, page=page, page_size=page_size
+        )
+
+    # --- Deal -> Project conversion ---
+    @staticmethod
+    async def preview_deal_conversion(
+        db: AsyncSession, deal_public_id: uuid.UUID, current_user: User
+    ) -> Any:
+        raise BadRequestError("Deal conversion is not supported without the CRM module.")
+
+    @staticmethod
+    async def convert_deal_to_project(
+        db: AsyncSession, deal_public_id: uuid.UUID, payload: Any, current_user: User
+    ) -> Project:
+        raise BadRequestError("Deal conversion is not supported without the CRM module.")
+
+    @staticmethod
+    async def seed_project_tasks_from_template(
+        db: AsyncSession, project: Project, template_key: str, current_user: Optional[User] = None,
+    ) -> None:
+        if not template_key or template_key not in PROJECT_TEMPLATES:
+            return
+
+        template = PROJECT_TEMPLATES[template_key]
+        initial_status = await ProjectTaskStatusRepository.get_initial(db, project_id=project.id)
+        if not initial_status:
+            return
+
+        from datetime import date, timedelta
+        ref_date = project.start_date or date.today()
+
+        for idx, t in enumerate(template["tasks"]):
+            start_offset = t.get("start_offset_days", 0)
+            due_offset = t.get("due_offset_days", 5)
+            task_start = ref_date + timedelta(days=start_offset)
+            task_due = ref_date + timedelta(days=due_offset)
+
+            custom_fields = {}
+            if "milestone" in t:
+                custom_fields["milestone"] = t["milestone"]
+
+            priority_val = t.get("priority", "medium")
+
+            parent_task = await ProjectTaskRepository.create(
+                db,
+                project_id=project.id,
+                parent_task_id=None,
+                title=t["title"],
+                description=t["description"],
+                status_id=initial_status.id,
+                order=idx,
+                start_date=task_start,
+                due_date=task_due,
+                priority=priority_val,
+                tags=t.get("tags", []),
+                custom_fields=custom_fields,
+            )
+            if current_user:
+                await AuditService.record(
+                    db, entity_type="project_task", entity_id=parent_task.id, action="create",
+                    changed_by_user_id=current_user.id, field_name="title", new_value=parent_task.title,
+                )
+
+            if "subtasks" in t:
+                for s_idx, s in enumerate(t["subtasks"]):
+                    s_start_offset = s.get("start_offset_days", start_offset)
+                    s_due_offset = s.get("due_offset_days", due_offset)
+                    s_start = ref_date + timedelta(days=s_start_offset)
+                    s_due = ref_date + timedelta(days=s_due_offset)
+
+                    s_priority_val = s.get("priority", "medium")
+
+                    subtask = await ProjectTaskRepository.create(
+                        db,
+                        project_id=project.id,
+                        parent_task_id=parent_task.id,
+                        title=s["title"],
+                        description=s["description"],
+                        status_id=initial_status.id,
+                        order=s_idx,
+                        start_date=s_start,
+                        due_date=s_due,
+                        priority=s_priority_val,
+                        tags=s.get("tags", []),
+                    )
+                    if current_user:
+                        await AuditService.record(
+                            db, entity_type="project_task", entity_id=parent_task.id, action="add_subtask",
+                            changed_by_user_id=current_user.id, field_name="subtask", new_value=subtask.title,
+                        )
+                        await AuditService.record(
+                            db, entity_type="project_task", entity_id=subtask.id, action="create",
+                            changed_by_user_id=current_user.id, field_name="title", new_value=subtask.title,
+                        )
+
+    @staticmethod
+    async def seed_project_tasks_custom(
+        db: AsyncSession, project: Project, custom_tasks: list[dict[str, Any]], current_user: Optional[User] = None,
+    ) -> None:
+        initial_status = await ProjectTaskStatusRepository.get_initial(db, project_id=project.id)
+        if not initial_status:
+            return
+
+        from datetime import date, timedelta
+        ref_date = project.start_date or date.today()
+
+        for idx, t in enumerate(custom_tasks):
+            if not t.get("included", True):
+                continue
+
+            start_offset = t.get("start_offset_days", 0)
+            due_offset = t.get("due_offset_days", 5)
+            task_start = ref_date + timedelta(days=start_offset)
+            task_due = ref_date + timedelta(days=due_offset)
+
+            custom_fields = {}
+            if "milestone" in t and t["milestone"]:
+                custom_fields["milestone"] = t["milestone"]
+
+            priority_val = t.get("priority", "medium")
+
+            parent_task = await ProjectTaskRepository.create(
+                db,
+                project_id=project.id,
+                parent_task_id=None,
+                title=t["title"],
+                description=t.get("description") or "",
+                status_id=initial_status.id,
+                order=idx,
+                start_date=task_start,
+                due_date=task_due,
+                priority=priority_val,
+                tags=t.get("tags", []),
+                custom_fields=custom_fields,
+            )
+            if current_user:
+                await AuditService.record(
+                    db, entity_type="project_task", entity_id=parent_task.id, action="create",
+                    changed_by_user_id=current_user.id, field_name="title", new_value=parent_task.title,
+                )
+
+            if "subtasks" in t and t["subtasks"]:
+                for s_idx, s in enumerate(t["subtasks"]):
+                    if not s.get("included", True):
+                        continue
+
+                    s_start_offset = s.get("start_offset_days", start_offset)
+                    s_due_offset = s.get("due_offset_days", due_offset)
+                    s_start = ref_date + timedelta(days=s_start_offset)
+                    s_due = ref_date + timedelta(days=s_due_offset)
+
+                    s_priority_val = s.get("priority", "medium")
+
+                    subtask = await ProjectTaskRepository.create(
+                        db,
+                        project_id=project.id,
+                        parent_task_id=parent_task.id,
+                        title=s["title"],
+                        description=s.get("description") or "",
+                        status_id=initial_status.id,
+                        order=s_idx,
+                        start_date=s_start,
+                        due_date=s_due,
+                        priority=s_priority_val,
+                        tags=s.get("tags", []),
+                    )
+                    if current_user:
+                        await AuditService.record(
+                            db, entity_type="project_task", entity_id=parent_task.id, action="add_subtask",
+                            changed_by_user_id=current_user.id, field_name="subtask", new_value=subtask.title,
+                        )
+                        await AuditService.record(
+                            db, entity_type="project_task", entity_id=subtask.id, action="create",
+                            changed_by_user_id=current_user.id, field_name="title", new_value=subtask.title,
+                        )

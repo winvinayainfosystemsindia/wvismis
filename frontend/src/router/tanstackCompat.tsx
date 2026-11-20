@@ -25,7 +25,7 @@ export type NavigateFunction = {
 };
 
 function resolvePath(to: string, currentPathname: string): string {
-	if (!to.startsWith('.')) {
+	if (to.startsWith('/')) {
 		return to;
 	}
 	try {

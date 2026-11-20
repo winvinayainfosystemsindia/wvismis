@@ -65,6 +65,9 @@ class TenantMixin:
     )
 
 
+TenantAwareMixin = TenantMixin
+
+
 class BaseModel(Base, TimestampMixin, SoftDeleteMixin):
     """Abstract base class for all database models"""
 

@@ -230,6 +230,8 @@ def custom_openapi():
     openapi_schema = get_openapi(
         title=settings.APP_NAME,
         version=settings.APP_VERSION,
+        contact={"name": "WinVinaya Infosystems", "url": "https://winvinaya.com", "email": "info@winvinaya.com"},
+        license_info={"name": "Proprietary Commercial License - Copyright (c) 2026 WinVinaya Infosystems. All rights reserved."},
         description="""
 ## WVISMIS — WinVinaya Management Information System Backend
 

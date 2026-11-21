@@ -32,3 +32,9 @@ uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 - **Tenant Rule**: All users are associated with an organization; unassigned registrations join the parent organization automatically.
 
 See **[backend/README.md](backend/README.md)** for full architecture details, environment configuration (`.env.dev` / `.env.prod`), WebSocket streaming protocol, and OpenAPI documentation links.
+
+## 📄 License & Copyright
+
+Copyright © 2026 **WinVinaya Infosystems**. All rights reserved.
+
+This software and associated documentation files are proprietary and confidential to WinVinaya Infosystems. Unauthorized copying, distribution, modification, or transmission of this software, via any medium, is strictly prohibited without explicit written permission. See [LICENSE](LICENSE) for full details.

@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     APP_NAME: str = "WVISMIS - WinVinaya MIS"
     APP_VERSION: str = "1.0.0"
     API_V1_PREFIX: str = "/api/v1"
+    COPYRIGHT: str = "Copyright (c) 2026 WinVinaya Infosystems. All rights reserved."
     DEBUG: bool = False
     ENVIRONMENT: str = "development"  # development, production, testing
     FRONTEND_URL: Optional[str] = None

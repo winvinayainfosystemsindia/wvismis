@@ -74,3 +74,13 @@ logs/
 # OS
 .DS_Store
 Thumbs.db
+
+# SSL, SSH & Cloud Credentials
+*.pem
+*.key
+*.cer
+*.crt
+*.pfx
+*.p12
+*.pub
+

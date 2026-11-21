@@ -64,9 +64,13 @@ const Sidebar: React.FC = () => {
 	const sidebarHoverBg = theme.layout.sidebar.hoverBg;
 	const drawerExpanded = open;
 
-	const handleLogout = () => {
-		dispatch(logoutUser());
-		navigate('/auth/login');
+	const handleLogout = async () => {
+		try {
+			await dispatch(logoutUser()).unwrap();
+		} catch {
+			// ignore logout errors
+		}
+		window.location.href = '/auth/login';
 	};
 
 	const getTrialDaysLeft = (expiryDateStr?: string) => {

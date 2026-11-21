@@ -78,12 +78,8 @@ def upgrade() -> None:
     )
 
     # 4. Standardize max_users for default organization
-    op.execute(
-        """
-        UPDATE organizations SET max_users = 100 WHERE max_users = 100000;
-        UPDATE plans SET user_limit = 100 WHERE tier = 'enterprise' AND (user_limit IS NULL OR user_limit > 100);
-        """
-    )
+    op.execute("UPDATE organizations SET max_users = 100 WHERE max_users = 100000;")
+    op.execute("UPDATE plans SET user_limit = 100 WHERE tier = 'enterprise' AND (user_limit IS NULL OR user_limit > 100);")
 
     # 5. Create AI credit tables
     op.execute(
@@ -111,7 +107,11 @@ def upgrade() -> None:
             updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
             CONSTRAINT uq_ai_wallet_org_user UNIQUE (organization_id, user_id)
         );
+        """
+    )
 
+    op.execute(
+        """
         CREATE TABLE IF NOT EXISTS ai_credit_transactions (
             id SERIAL PRIMARY KEY,
             wallet_id INTEGER NOT NULL REFERENCES ai_credit_wallets(id) ON DELETE CASCADE,

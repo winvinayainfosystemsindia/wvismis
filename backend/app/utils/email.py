@@ -14,6 +14,7 @@ from datetime import datetime
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.utils import formatdate, make_msgid
 from typing import Any, List, Optional, Tuple
 
 import aiosmtplib
@@ -78,7 +79,10 @@ async def send_email(
     message["From"] = f"{from_name} <{from_email}>"
     message["To"] = to_email
     message["Subject"] = subject
+    message["Date"] = formatdate(localtime=True)
+    message["Message-ID"] = make_msgid(domain="winvinaya.com")
     message["Reply-To"] = reply_to or from_email
+    message["X-Mailer"] = "WinVinaya MIS Enterprise Mailer"
 
     if cc:
         message["Cc"] = ", ".join(cc)
@@ -105,8 +109,11 @@ async def send_email(
             to_email,
         )
 
+        recipients = [to_email] + (cc or [])
         await aiosmtplib.send(
             message,
+            sender=from_email,
+            recipients=recipients,
             hostname=smtp_host,
             port=smtp_port,
             username=smtp_user,

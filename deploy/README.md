@@ -19,7 +19,7 @@ flowchart TD
 
         BackendDev -->|"Local Connection"| PGDev["PostgreSQL: wvismis_dev"]
         BackendProd -->|"Local Connection"| PGProd["PostgreSQL: wvismis_prod"]
-        
+
         CronBackup["Automated DB Backups"] -->|Daily pg_dump| BackupsDir["/var/www/wvismis/backups/db"]
     end
 ```
@@ -28,15 +28,15 @@ flowchart TD
 
 ## 📋 Environment & Port Allocation
 
-| Component | Development | Production |
-| :--- | :--- | :--- |
-| **Domain** | `dev-mis.winvinaya.com` | `mis.winvinaya.com` |
-| **Frontend Root** | `/var/www/wvismis/frontend/dist-dev` | `/var/www/wvismis/frontend/dist-prod` |
-| **Backend Internal Port** | `8000` | `8002` |
-| **PM2 Process Name** | `wvismis-backend-dev` | `wvismis-backend-prod` |
-| **Backend Config** | `/var/www/wvismis/backend/.env.dev` | `/var/www/wvismis/backend/.env.prod` |
-| **Database Name** | `wvismis_dev` | `wvismis_prod` |
-| **Database User** | `wvismis_user` | `wvismis_user` |
+| Component                 | Development                          | Production                            |
+| :------------------------ | :----------------------------------- | :------------------------------------ |
+| **Domain**                | `dev-mis.winvinaya.com`              | `mis.winvinaya.com`                   |
+| **Frontend Root**         | `/var/www/wvismis/frontend/dist-dev` | `/var/www/wvismis/frontend/dist-prod` |
+| **Backend Internal Port** | `8000`                               | `8002`                                |
+| **PM2 Process Name**      | `wvismis-backend-dev`                | `wvismis-backend-prod`                |
+| **Backend Config**        | `/var/www/wvismis/backend/.env.dev`  | `/var/www/wvismis/backend/.env.prod`  |
+| **Database Name**         | `wvismis_dev`                        | `wvismis_prod`                        |
+| **Database User**         | `wvismis_user`                       | `wvismis_user`                        |
 
 ---
 
@@ -65,11 +65,13 @@ flowchart TD
 ## 🛠️ Step 2: Server Initial Provisioning
 
 1. SSH into the instance:
+
    ```bash
    ssh -i your-key.pem ubuntu@YOUR_EC2_ELASTIC_IP
    ```
 
 2. Clone the repository into `/var/www/wvismis`:
+
    ```bash
    sudo mkdir -p /var/www/wvismis
    sudo chown -R $USER:$USER /var/www/wvismis
@@ -78,6 +80,7 @@ flowchart TD
    ```
 
 3. Make all deployment scripts executable:
+
    ```bash
    chmod +x deploy/*.sh
    ```
@@ -86,19 +89,22 @@ flowchart TD
    ```bash
    sudo ./deploy/setup-ec2.sh
    ```
-   *This automatically provisions Python 3.11, Node.js 20 LTS, PM2, PostgreSQL 16, Nginx, Certbot, 4GB Swap space, and UFW firewall.*
+   _This automatically provisions Python 3.11, Node.js 20 LTS, PM2, PostgreSQL 16, Nginx, Certbot, 4GB Swap space, and UFW firewall._
 
 ---
 
 ## ⚙️ Step 3: Environment Configuration
 
 ### Backend Environment Configuration
+
 1. **For Development (`backend/.env.dev`)**:
+
    ```bash
    cp backend/.env.dev.example backend/.env.dev
    nano backend/.env.dev
    ```
-   *Verify:*
+
+   _Verify:_
    - `PORT=8000`
    - `POSTGRES_DB=wvismis_dev`
    - `POSTGRES_USER=wvismis_user`
@@ -112,7 +118,7 @@ flowchart TD
    cp backend/.env.prod.example backend/.env.prod
    nano backend/.env.prod
    ```
-   *Verify:*
+   _Verify:_
    - `PORT=8002`
    - `POSTGRES_DB=wvismis_prod`
    - `POSTGRES_USER=wvismis_user`
@@ -121,7 +127,9 @@ flowchart TD
    - Generate strong secret key: `openssl rand -hex 32`
 
 ### Frontend Environment Configuration
+
 1. **For Development (`frontend/.env.dev`)**:
+
    ```bash
    cat << 'EOF' > frontend/.env.dev
    VITE_API_URL=https://dev-mis.winvinaya.com
@@ -142,6 +150,7 @@ flowchart TD
 ## 🌐 Step 4: Configure Nginx & SSL
 
 1. Link Nginx site configuration files:
+
    ```bash
    sudo cp nginx/dev.conf /etc/nginx/sites-available/wvismis-dev.conf
    sudo cp nginx/prod.conf /etc/nginx/sites-available/wvismis-prod.conf
@@ -157,19 +166,21 @@ flowchart TD
    ```bash
    sudo ./deploy/setup-ssl.sh both
    ```
-   *(Or run `sudo ./deploy/setup-ssl.sh dev` or `sudo ./deploy/setup-ssl.sh prod` individually).*
+   _(Or run `sudo ./deploy/setup-ssl.sh dev` or `sudo ./deploy/setup-ssl.sh prod` individually)._
 
 ---
 
 ## 🚀 Step 5: Deploying the Application
 
 ### Deploy Development Environment:
+
 ```bash
 cd /var/www/wvismis
 ./deploy/deploy-all.sh dev
 ```
 
 ### Deploy Production Environment:
+
 ```bash
 cd /var/www/wvismis
 ./deploy/deploy-all.sh prod
@@ -179,26 +190,29 @@ cd /var/www/wvismis
 
 ## 🔍 Individual Operational Scripts
 
-| Script | Purpose | Example Usage |
-| :--- | :--- | :--- |
-| `deploy-all.sh` | Full build, migration, and deploy | `./deploy/deploy-all.sh {dev\|prod}` |
-| `backend-deploy.sh` | Deploy backend & run Alembic migrations | `./deploy/backend-deploy.sh {dev\|prod}` |
-| `frontend-deploy.sh` | Build React & reload Nginx | `./deploy/frontend-deploy.sh {dev\|prod}` |
-| `health-check.sh` | Run system & database health checks | `./deploy/health-check.sh {dev\|prod}` |
-| `backup-db.sh` | Manual/cron database backup | `./deploy/backup-db.sh {dev\|prod}` |
-| `restore-db.sh` | Restore database from backup | `./deploy/restore-db.sh {dev\|prod}` |
-| `rollback.sh` | Rollback code & database to previous commit | `./deploy/rollback.sh {dev\|prod}` |
-| `setup-ssl.sh` | Obtain and configure Let's Encrypt SSL | `sudo ./deploy/setup-ssl.sh {dev\|prod\|both}` |
+| Script               | Purpose                                     | Example Usage                                  |
+| :------------------- | :------------------------------------------ | :--------------------------------------------- |
+| `deploy-all.sh`      | Full build, migration, and deploy           | `./deploy/deploy-all.sh {dev\|prod}`           |
+| `backend-deploy.sh`  | Deploy backend & run Alembic migrations     | `./deploy/backend-deploy.sh {dev\|prod}`       |
+| `frontend-deploy.sh` | Build React & reload Nginx                  | `./deploy/frontend-deploy.sh {dev\|prod}`      |
+| `health-check.sh`    | Run system & database health checks         | `./deploy/health-check.sh {dev\|prod}`         |
+| `backup-db.sh`       | Manual/cron database backup                 | `./deploy/backup-db.sh {dev\|prod}`            |
+| `restore-db.sh`      | Restore database from backup                | `./deploy/restore-db.sh {dev\|prod}`           |
+| `rollback.sh`        | Rollback code & database to previous commit | `./deploy/rollback.sh {dev\|prod}`             |
+| `setup-ssl.sh`       | Obtain and configure Let's Encrypt SSL      | `sudo ./deploy/setup-ssl.sh {dev\|prod\|both}` |
 
 ---
 
 ## 🔄 Automated Nightly Database Backup Cronjob
 
 To automate nightly backups at 2:00 AM:
+
 ```bash
 crontab -e
 ```
+
 Add the following lines:
+
 ```cron
 # Daily DB Backups for WinVinaya MIS at 2:00 AM (Dev) and 2:30 AM (Prod)
 0 2 * * * /var/www/wvismis/deploy/backup-db.sh dev >> /var/www/wvismis/logs/backup_cron.log 2>&1

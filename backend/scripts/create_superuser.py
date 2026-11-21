@@ -95,7 +95,25 @@ async def setup_superuser_in_db(
     from app.models.plan import Plan, PlanTier, Module
     from app.models.user import User, UserRole
 
-    # 1. Ensure Plans exist
+    # 1. Ensure Plans schema and default rows exist
+    from sqlalchemy import text
+    await db.execute(
+        text("""
+        DO $$
+        BEGIN
+            IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='plans') THEN
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='plans' AND column_name='is_deleted') THEN
+                    ALTER TABLE plans ADD COLUMN is_deleted BOOLEAN NOT NULL DEFAULT FALSE;
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='plans' AND column_name='deleted_at') THEN
+                    ALTER TABLE plans ADD COLUMN deleted_at TIMESTAMP WITH TIME ZONE;
+                END IF;
+            END IF;
+        END $$;
+        """)
+    )
+    await db.commit()
+
     plan_defs = {
         PlanTier.FREE: ("Free", [Module.PROJECT_MANAGEMENT.value], 100, 10, 0),
         PlanTier.BASIC: ("Basic", [Module.PROJECT_MANAGEMENT.value, Module.TIMESHEET_MANAGEMENT.value, Module.CRM_MANAGEMENT.value, Module.REPORTS_MANAGEMENT.value], 500, 20, 149),

@@ -53,9 +53,25 @@ def upgrade() -> None:
             user_limit INTEGER DEFAULT 100,
             price_per_user INTEGER NOT NULL DEFAULT 0,
             is_active BOOLEAN NOT NULL DEFAULT TRUE,
+            is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+            deleted_at TIMESTAMP WITH TIME ZONE,
             created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
             updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
         );
+        """
+    )
+
+    op.execute(
+        """
+        DO $$
+        BEGIN
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='plans' AND column_name='is_deleted') THEN
+                ALTER TABLE plans ADD COLUMN is_deleted BOOLEAN NOT NULL DEFAULT FALSE;
+            END IF;
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='plans' AND column_name='deleted_at') THEN
+                ALTER TABLE plans ADD COLUMN deleted_at TIMESTAMP WITH TIME ZONE;
+            END IF;
+        END $$;
         """
     )
 
@@ -90,7 +106,7 @@ def upgrade() -> None:
         DO $$
         BEGIN
             IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'aicredittransactionreason') THEN
-                CREATE TYPE aicredittransactionreason AS ENUM ('monthly_grant', 'purchase', 'usage', 'admin_grant', 'adjustment', 'rollover');
+                CREATE TYPE aicredittransactionreason AS ENUM ('monthly_grant', 'purchase', 'usage', 'admin_grant', 'adjustment', 'rollover', 'ai_call', 'admin_adjustment');
             END IF;
         END $$;
         """
@@ -102,13 +118,14 @@ def upgrade() -> None:
             id SERIAL PRIMARY KEY,
             organization_id INTEGER NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
             user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            period_start TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
             balance INTEGER NOT NULL DEFAULT 0,
-            granted_credits INTEGER NOT NULL DEFAULT 0,
-            used_credits INTEGER NOT NULL DEFAULT 0,
-            current_period_start TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+            granted INTEGER NOT NULL DEFAULT 0,
+            is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+            deleted_at TIMESTAMP WITH TIME ZONE,
             created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
             updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
-            CONSTRAINT uq_ai_wallet_org_user UNIQUE (organization_id, user_id)
+            CONSTRAINT uq_ai_credit_wallet_org_user UNIQUE (organization_id, user_id)
         );
         """
     )
@@ -117,15 +134,21 @@ def upgrade() -> None:
         """
         CREATE TABLE IF NOT EXISTS ai_credit_transactions (
             id SERIAL PRIMARY KEY,
-            wallet_id INTEGER NOT NULL REFERENCES ai_credit_wallets(id) ON DELETE CASCADE,
             organization_id INTEGER NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            wallet_id INTEGER NOT NULL REFERENCES ai_credit_wallets(id) ON DELETE CASCADE,
+            user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
             amount INTEGER NOT NULL,
             balance_after INTEGER NOT NULL,
             reason aicredittransactionreason NOT NULL,
-            reference_id VARCHAR(100),
-            description VARCHAR(255),
-            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
+            provider VARCHAR(50),
+            model VARCHAR(100),
+            action_type VARCHAR(50),
+            tokens_used INTEGER,
+            is_estimated BOOLEAN NOT NULL DEFAULT FALSE,
+            is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+            deleted_at TIMESTAMP WITH TIME ZONE,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
         );
         """
     )

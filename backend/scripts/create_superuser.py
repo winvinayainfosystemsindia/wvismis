@@ -95,7 +95,7 @@ async def setup_superuser_in_db(
     from app.models.plan import Plan, PlanTier, Module
     from app.models.user import User, UserRole
 
-    # 1. Ensure Plans schema and default rows exist
+    # 1. Ensure Plans and Users schema compatibility
     from sqlalchemy import text
     await db.execute(
         text("""
@@ -107,6 +107,15 @@ async def setup_superuser_in_db(
                 END IF;
                 IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='plans' AND column_name='deleted_at') THEN
                     ALTER TABLE plans ADD COLUMN deleted_at TIMESTAMP WITH TIME ZONE;
+                END IF;
+            END IF;
+
+            IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='users') THEN
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='timezone') THEN
+                    ALTER TABLE users ADD COLUMN timezone VARCHAR(64);
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='reporting_manager_id') THEN
+                    ALTER TABLE users ADD COLUMN reporting_manager_id INTEGER REFERENCES users(id) ON DELETE SET NULL;
                 END IF;
             END IF;
         END $$;

@@ -153,6 +153,21 @@ def upgrade() -> None:
         """
     )
 
+    # 6. Ensure users table has timezone and reporting_manager_id
+    op.execute(
+        """
+        DO $$
+        BEGIN
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='timezone') THEN
+                ALTER TABLE users ADD COLUMN timezone VARCHAR(64);
+            END IF;
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='reporting_manager_id') THEN
+                ALTER TABLE users ADD COLUMN reporting_manager_id INTEGER REFERENCES users(id) ON DELETE SET NULL;
+            END IF;
+        END $$;
+        """
+    )
+
 
 def downgrade() -> None:
     op.execute("DROP TABLE IF EXISTS ai_credit_transactions CASCADE;")

@@ -117,7 +117,7 @@ async def send_email(
         )
 
         recipients = [to_email] + (cc or [])
-        await aiosmtplib.send(
+        send_result = await aiosmtplib.send(
             message,
             sender=from_email,
             recipients=recipients,
@@ -129,7 +129,20 @@ async def send_email(
             start_tls=start_tls_strategy,
             timeout=25.0,
         )
-        logger.info("Email '%s' sent successfully to %s", subject, to_email)
+        # aiosmtplib returns (per-recipient refusals, final server response). The
+        # server response contains the relay's queue ID, which is what the mail
+        # provider needs to trace a message that was accepted but never delivered.
+        refused, server_response = send_result
+        if refused:
+            logger.error("SMTP relay refused recipients for '%s': %s", subject, refused)
+            return False
+        logger.info(
+            "Email '%s' accepted by relay for %s (Message-ID: %s, relay response: %s)",
+            subject,
+            to_email,
+            message["Message-ID"],
+            server_response,
+        )
         return True
 
     except aiosmtplib.SMTPAuthenticationError as e:

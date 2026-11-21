@@ -1,6 +1,7 @@
 """User repository with multi-tenant queries"""
 
-from typing import Optional, List
+import uuid
+from typing import Optional, List, Any, Union
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession

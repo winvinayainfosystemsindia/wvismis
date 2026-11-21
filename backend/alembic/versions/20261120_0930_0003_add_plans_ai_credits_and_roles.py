@@ -12,7 +12,7 @@ from sqlalchemy.dialects import postgresql
 
 
 # revision identifiers, used by Alembic.
-revision: str = "0003_add_plans_ai_credits_and_roles"
+revision: str = "0003_plans_ai_credits_roles"
 down_revision: Union[str, None] = "0002_add_organization_hierarchy"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -20,6 +20,9 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     conn = op.get_bind()
+
+    # Expand alembic_version version_num to accommodate future descriptive revisions
+    op.execute("ALTER TABLE alembic_version ALTER COLUMN version_num TYPE VARCHAR(128);")
 
     # 1. Update userrole enum with owner, member, viewer
     for role_val in ("owner", "member", "viewer"):

@@ -109,18 +109,18 @@ class UserService:
     ) -> User:
         """Create a new user with multi-tenant resolution"""
         email_clean = user_in.email.lower().strip()
-        existing_user = await self.repository.get_by_email(email_clean)
+        existing_user = await self.repository.get_by_email(email_clean, include_deleted=True)
         if existing_user:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Email already registered",
+                detail=f"Email '{email_clean}' is already registered",
             )
 
-        existing_username = await self.repository.get_by_username(user_in.username.strip())
+        existing_username = await self.repository.get_by_username(user_in.username.strip(), include_deleted=True)
         if existing_username:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Username already taken",
+                detail=f"Username '{user_in.username}' is already taken",
             )
 
         created_new_org = False

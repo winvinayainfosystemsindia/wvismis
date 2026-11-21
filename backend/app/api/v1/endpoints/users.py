@@ -325,17 +325,49 @@ async def invite_user(
         except ValueError:
             role_enum = UserRole.MEMBER
 
-    user_in = UserCreate(
-        email=payload["email"],
-        username=payload["username"],
-        full_name=payload.get("full_name"),
-        password=payload.get("password") or "Welcome@123",
-        role=role_enum,
-        is_active=True,
-        is_verified=False,
-    )
+    email_clean = payload["email"].lower().strip()
     user_service = UserService(db)
-    user = await user_service.create_user(user_in, forced_organization_id=current_org.id)
+    existing_user = await user_service.repository.get_by_email(email_clean, include_deleted=True)
+
+    if existing_user:
+        if existing_user.is_deleted:
+            # Re-activate and restore previously deleted user
+            existing_user.is_deleted = False
+            existing_user.deleted_at = None
+            existing_user.is_active = True
+            existing_user.is_verified = False
+            existing_user.organization_id = current_org.id
+            existing_user.role = role_enum
+            if payload.get("full_name"):
+                existing_user.full_name = payload["full_name"]
+            await db.commit()
+            await db.refresh(existing_user)
+            user = existing_user
+        elif not existing_user.is_verified:
+            # Teammate is already invited but pending verification: update details and resend invite
+            existing_user.organization_id = current_org.id
+            existing_user.role = role_enum
+            if payload.get("full_name"):
+                existing_user.full_name = payload["full_name"]
+            await db.commit()
+            await db.refresh(existing_user)
+            user = existing_user
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"User with email '{email_clean}' is already registered and active in the organization.",
+            )
+    else:
+        user_in = UserCreate(
+            email=email_clean,
+            username=payload["username"],
+            full_name=payload.get("full_name"),
+            password=payload.get("password") or "Welcome@123",
+            role=role_enum,
+            is_active=True,
+            is_verified=False,
+        )
+        user = await user_service.create_user(user_in, forced_organization_id=current_org.id)
 
     # Generate 7-day action token for invitation acceptance
     invite_token = create_action_token(

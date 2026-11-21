@@ -132,6 +132,29 @@ def upgrade() -> None:
 
     op.execute(
         """
+        DO $$
+        BEGIN
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='ai_credit_wallets' AND column_name='period_start') THEN
+                ALTER TABLE ai_credit_wallets ADD COLUMN period_start TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL;
+            END IF;
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='ai_credit_wallets' AND column_name='balance') THEN
+                ALTER TABLE ai_credit_wallets ADD COLUMN balance INTEGER NOT NULL DEFAULT 0;
+            END IF;
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='ai_credit_wallets' AND column_name='granted') THEN
+                ALTER TABLE ai_credit_wallets ADD COLUMN granted INTEGER NOT NULL DEFAULT 0;
+            END IF;
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='ai_credit_wallets' AND column_name='is_deleted') THEN
+                ALTER TABLE ai_credit_wallets ADD COLUMN is_deleted BOOLEAN NOT NULL DEFAULT FALSE;
+            END IF;
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='ai_credit_wallets' AND column_name='deleted_at') THEN
+                ALTER TABLE ai_credit_wallets ADD COLUMN deleted_at TIMESTAMP WITH TIME ZONE;
+            END IF;
+        END $$;
+        """
+    )
+
+    op.execute(
+        """
         CREATE TABLE IF NOT EXISTS ai_credit_transactions (
             id SERIAL PRIMARY KEY,
             organization_id INTEGER NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,

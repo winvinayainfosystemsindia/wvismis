@@ -81,17 +81,17 @@ class UserRepository(BaseRepository[User]):
     async def get_by_email(
         self,
         email: str,
+        include_deleted: bool = False,
         organization_id: Optional[int] = None,
     ) -> Optional[User]:
         """Get user by email, optionally scoped to an organization"""
         query = (
             select(User)
             .options(selectinload(User.organization))
-            .where(
-                User.email == email.lower().strip(),
-                User.is_deleted == False,
-            )
+            .where(User.email == email.lower().strip())
         )
+        if not include_deleted:
+            query = query.where(User.is_deleted == False)
         if organization_id is not None:
             query = query.where(User.organization_id == organization_id)
         result = await self.db.execute(query)
@@ -100,17 +100,17 @@ class UserRepository(BaseRepository[User]):
     async def get_by_username(
         self,
         username: str,
+        include_deleted: bool = False,
         organization_id: Optional[int] = None,
     ) -> Optional[User]:
         """Get user by username, optionally scoped to an organization"""
         query = (
             select(User)
             .options(selectinload(User.organization))
-            .where(
-                User.username == username.strip(),
-                User.is_deleted == False,
-            )
+            .where(User.username == username.strip())
         )
+        if not include_deleted:
+            query = query.where(User.is_deleted == False)
         if organization_id is not None:
             query = query.where(User.organization_id == organization_id)
         result = await self.db.execute(query)

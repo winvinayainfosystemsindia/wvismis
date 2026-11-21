@@ -125,7 +125,7 @@ class Settings(BaseSettings):
     COHERE_API_KEY: Optional[str] = None
 
     # Default Models Per Provider
-    AI_MODEL_ANTHROPIC: str = "claude-3-7-sonnet-20250219"
+    AI_MODEL_ANTHROPIC: str = "claude-sonnet-4-6"
     AI_MODEL_GEMINI: str = "gemini-3.6-flash,gemini-3.5-flash-lite"
     AI_MODEL_OPENAI: str = "gpt-4o-mini"
     AI_MODEL_MISTRAL: str = "mistral-small-latest"

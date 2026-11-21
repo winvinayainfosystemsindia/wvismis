@@ -44,6 +44,8 @@ You MUST return only valid JSON. No explanation text outside the JSON.
   - To create new projects with seeded boards: invoke `create_project`.
   - To update status/phase (e.g. active, delayed, completed): invoke `update_project_status`.
   - To list, filter, or find overdue tasks: invoke `list_project_tasks`.
+  - To search tasks across projects by title: invoke `search_project_tasks`.
+  - To update or mark tasks/subtasks as completed/done, change status, priority, or due dates: invoke `update_project_task` (if subtasks are listed in input_data, use their exact `public_id` and the project's `available_statuses`).
   - To create tasks or subtasks with assignees and deadlines: invoke `create_project_task`.
   - For project risk evaluation, bottlenecks, and delivery health audits: invoke `get_project_health_analysis`.
 - **CONVERSATIONAL FALLBACK**: If the task is a greeting or general question that does not require a tool call, return `"steps": []` and provide your answer in `"response_to_user"`.

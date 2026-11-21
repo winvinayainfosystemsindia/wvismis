@@ -19,7 +19,7 @@ class AnthropicProvider(LLMProvider):
         self._raw_model = model or settings.AI_MODEL_ANTHROPIC
         self._models = [m.strip() for m in self._raw_model.split(",") if m.strip()]
         if not self._models:
-            self._models = ["claude-3-7-sonnet-20250219", "claude-3-5-sonnet-20241022"]
+            self._models = ["claude-sonnet-4-6"]
         self._model = self._models[0]
         if not self._api_key:
             raise LLMAuthError("anthropic")
@@ -46,7 +46,7 @@ class AnthropicProvider(LLMProvider):
         }
 
         candidate_models = list(self._models)
-        for backup_sonnet in ["claude-3-7-sonnet-20250219", "claude-3-5-sonnet-20241022", "claude-3-5-sonnet-latest"]:
+        for backup_sonnet in ["claude-sonnet-4-6", "claude-3-7-sonnet-20250219", "claude-3-5-sonnet-20241022"]:
             if backup_sonnet not in candidate_models:
                 candidate_models.append(backup_sonnet)
 

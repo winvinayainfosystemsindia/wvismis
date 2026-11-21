@@ -27,6 +27,8 @@ from app.models.project import (
     LeadPriority,
 )
 from app.models.timesheet import ProjectTimeLog
+from app.repositories.project import ProjectTaskStatusRepository
+from app.schemas.project import ProjectTaskUpdate
 from app.services.project import ProjectService
 from app.services.project_templates import PROJECT_TEMPLATES
 
@@ -765,6 +767,174 @@ class GetProjectHealthAnalysisTool(BaseTool):
         )
 
 
+async def _resolve_task(db: AsyncSession, organization_id: int, identifier: str) -> ProjectTask | None:
+    """Looks a task up by public_id if identifier is a UUID, otherwise by title search."""
+    identifier = identifier.strip()
+    try:
+        task_uuid = uuid.UUID(identifier)
+    except ValueError:
+        task_uuid = None
+
+    if task_uuid is not None:
+        result = await db.execute(
+            select(ProjectTask)
+            .options(selectinload(ProjectTask.project), selectinload(ProjectTask.status))
+            .where(
+                ProjectTask.public_id == task_uuid,
+                ProjectTask.organization_id == organization_id,
+                ProjectTask.is_deleted.is_(False),
+            )
+        )
+        task = result.scalars().first()
+        if task:
+            return task
+
+    result = await db.execute(
+        select(ProjectTask)
+        .options(selectinload(ProjectTask.project), selectinload(ProjectTask.status))
+        .where(
+            ProjectTask.organization_id == organization_id,
+            ProjectTask.is_deleted.is_(False),
+            ProjectTask.title.ilike(f"%{identifier}%"),
+        )
+        .order_by(ProjectTask.created_at.desc())
+        .limit(1)
+    )
+    return result.scalars().first()
+
+
+class SearchProjectTasksTool(BaseTool):
+    """Searches project tasks by title or query across projects."""
+
+    definition = ToolDefinition(
+        name="search_project_tasks",
+        description="Searches project tasks and subtasks by title across all projects.",
+        category="projects",
+        is_read_only=True,
+        requires_approval=False,
+        allowed_roles=[r.value for r in UserRole],
+        parameters={
+            "query": ToolParameterSchema(type="string", description="Text to search for in the task title."),
+            "limit": ToolParameterSchema(type="integer", description="Maximum results (default 10).", default=10),
+        },
+        required_parameters=["query"],
+    )
+
+    async def execute(self, params: dict[str, Any], db: AsyncSession, user: User) -> ToolResult:
+        query_text = str(params.get("query", "")).strip()
+        limit = min(int(params.get("limit") or 10), 50)
+
+        result = await db.execute(
+            select(ProjectTask)
+            .options(selectinload(ProjectTask.project), selectinload(ProjectTask.status), selectinload(ProjectTask.assignee))
+            .where(
+                ProjectTask.organization_id == user.organization_id,
+                ProjectTask.is_deleted.is_(False),
+                ProjectTask.title.ilike(f"%{query_text}%"),
+            )
+            .order_by(ProjectTask.created_at.desc())
+            .limit(limit)
+        )
+        tasks = result.scalars().all()
+
+        results = []
+        for t in tasks:
+            results.append({
+                "public_id": str(t.public_id),
+                "title": t.title,
+                "project_name": t.project.name if t.project else None,
+                "status": t.status.name if t.status else None,
+                "priority": t.priority.value if t.priority else None,
+                "is_completed": t.completed_at is not None,
+            })
+
+        return ToolResult(
+            success=True,
+            message=f"Found **{len(results)}** task(s) matching '{query_text}'.",
+            data={"tasks": results, "count": len(results)},
+        )
+
+
+class UpdateProjectTaskTool(BaseTool):
+    """Updates fields on an existing task or subtask (status, priority, due date, description)."""
+
+    definition = ToolDefinition(
+        name="update_project_task",
+        description=(
+            "Updates fields on an existing project task or subtask: status, title, description, "
+            "priority, due_date, estimated_hours, or assignee. Can mark a subtask as completed."
+        ),
+        category="projects",
+        is_read_only=False,
+        requires_approval=False,
+        allowed_roles=[r.value for r in UserRole],
+        parameters={
+            "task": ToolParameterSchema(type="string", description="The task's public_id (UUID) or title to update."),
+            "status": ToolParameterSchema(type="string", description="New status name, e.g. 'Completed', 'Done', 'In Progress'."),
+            "title": ToolParameterSchema(type="string", description="New title for the task."),
+            "description": ToolParameterSchema(type="string", description="New description for the task."),
+            "priority": ToolParameterSchema(type="string", description="New priority: low, medium, high, urgent.", enum=["low", "medium", "high", "urgent"]),
+            "due_date": ToolParameterSchema(type="string", description="New due date (YYYY-MM-DD)."),
+            "estimated_hours": ToolParameterSchema(type="number", description="Estimated effort in hours."),
+        },
+        required_parameters=["task"],
+    )
+
+    async def execute(self, params: dict[str, Any], db: AsyncSession, user: User) -> ToolResult:
+        task_ident = str(params.get("task", "")).strip()
+        task = await _resolve_task(db, user.organization_id, task_ident)
+        if not task:
+            return ToolResult(
+                success=False,
+                message=f"No task matching '{task_ident}' was found.",
+                error="not_found",
+            )
+
+        update_payload = ProjectTaskUpdate()
+        status_name = params.get("status")
+
+        if status_name:
+            stat_str = str(status_name).strip()
+            # Fetch all available statuses for this task's project
+            statuses = await ProjectTaskStatusRepository.list_by_project(db, project_id=task.project_id)
+            matched_status = next((s for s in statuses if s.name.lower() == stat_str.lower()), None)
+            if not matched_status and stat_str.lower() in ("done", "completed", "complete", "finish", "finished", "closed"):
+                matched_status = next((s for s in statuses if s.is_done_status), None)
+
+            if matched_status:
+                update_payload.status_id = matched_status.id
+            else:
+                return ToolResult(
+                    success=False,
+                    message=f"Status '{stat_str}' not found on project '{task.project.name if task.project else ''}'.",
+                    error="invalid_status",
+                )
+
+        if "title" in params and params["title"]:
+            update_payload.title = str(params["title"]).strip()
+        if "description" in params and params["description"] is not None:
+            update_payload.description = str(params["description"])
+        if "priority" in params and params["priority"]:
+            try:
+                update_payload.priority = LeadPriority(params["priority"].lower())
+            except ValueError:
+                pass
+        if "due_date" in params and params["due_date"]:
+            try:
+                update_payload.due_date = date.fromisoformat(params["due_date"])
+            except ValueError:
+                pass
+        if "estimated_hours" in params and params["estimated_hours"] is not None:
+            update_payload.estimated_hours = float(params["estimated_hours"])
+
+        updated_task = await ProjectService.update_task(db, task.public_id, update_payload, user)
+        return ToolResult(
+            success=True,
+            message=f"Successfully updated task **{updated_task.title}**.",
+            data={"task_public_id": str(updated_task.public_id), "title": updated_task.title},
+        )
+
+
 def register_project_tools() -> None:
     """Register all project and task tools in the central MCP registry."""
     registry.register(SearchProjectsTool())
@@ -774,6 +944,8 @@ def register_project_tools() -> None:
     registry.register(ListProjectTasksTool())
     registry.register(CreateProjectTaskTool())
     registry.register(GetProjectHealthAnalysisTool())
+    registry.register(SearchProjectTasksTool())
+    registry.register(UpdateProjectTaskTool())
 
 
 register_project_tools()

@@ -43,7 +43,11 @@ async def get_llm_provider(
     db: Optional[AsyncSession] = None,
     override: str | None = None,
     organization_id: Optional[int] = None,
+    org_id: Optional[int] = None,
+    **kwargs,
 ) -> LLMProvider:
+    if organization_id is None and org_id is not None:
+        organization_id = org_id
     repo = SystemSettingRepository(db) if db is not None else None
     registry = get_provider_registry()
 

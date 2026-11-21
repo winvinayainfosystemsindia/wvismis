@@ -12,7 +12,8 @@ import {
 	AccessTime as TimeIcon,
 	AccountCircle as UserIcon,
 	AssignmentInd as RoleIcon,
-	CalendarToday as JoinIcon
+	CalendarToday as JoinIcon,
+	Send as SendIcon,
 } from '@mui/icons-material';
 import type { TeamMember } from '../../../../models/user';
 import { ROLE_LABELS } from '../../../../models/user';
@@ -28,6 +29,7 @@ interface UserDetailDrawerProps {
 	onReactivate: (user: TeamMember) => void;
 	onDelete: (user: TeamMember) => void;
 	onEdit: (user: TeamMember) => void;
+	onResendInvite?: (user: TeamMember) => void;
 	isSelf: boolean;
 }
 
@@ -66,7 +68,7 @@ const getLastActiveString = (user: TeamMember) => {
 };
 
 export const UserDetailDrawer: React.FC<UserDetailDrawerProps> = ({
-	user, open, onClose, onSendPasswordReset, onDeactivate, onReactivate, onDelete, onEdit, isSelf
+	user, open, onClose, onSendPasswordReset, onDeactivate, onReactivate, onDelete, onEdit, onResendInvite, isSelf
 }) => {
 	const theme = useTheme();
 	const isDark = theme.palette.mode === 'dark';
@@ -77,6 +79,12 @@ export const UserDetailDrawer: React.FC<UserDetailDrawerProps> = ({
 	const lastActive = getLastActiveString(user);
 
 	const actionMenuItems: ActionMenuItem[] = [
+		...(!user.is_verified && onResendInvite ? [{
+			label: 'Resend Invitation Email',
+			icon: <SendIcon fontSize="small" />,
+			onClick: () => onResendInvite(user),
+			color: theme.palette.info.main,
+		}] : []),
 		{
 			label: 'Edit Details',
 			icon: <EditIcon fontSize="small" />,
@@ -247,6 +255,34 @@ export const UserDetailDrawer: React.FC<UserDetailDrawerProps> = ({
 						</Box>
 					</CardContent>
 				</Card>
+
+				{/* Invitation / Resend Invite Section */}
+				{!user.is_verified && onResendInvite && (
+					<Box sx={{ mb: 3 }}>
+						<Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1.5, letterSpacing: '0.02em', color: 'text.primary' }}>
+							INVITATION OPERATIONS
+						</Typography>
+						<Button
+							variant="contained"
+							color="info"
+							fullWidth
+							startIcon={<SendIcon />}
+							onClick={() => onResendInvite(user)}
+							sx={{
+								textTransform: 'none',
+								fontWeight: 700,
+								borderRadius: 2.5,
+								boxShadow: 'none',
+								py: 1,
+								'&:hover': {
+									boxShadow: `0 4px 12px ${alpha(theme.palette.info.main, 0.25)}`,
+								}
+							}}
+						>
+							Resend Invitation Email
+						</Button>
+					</Box>
+				)}
 
 				{/* Security / Reset Password section */}
 				{user.is_verified && user.is_active && (

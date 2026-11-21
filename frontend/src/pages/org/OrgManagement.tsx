@@ -199,6 +199,7 @@ const OrgManagement: React.FC = () => {
 					open={detailDrawerOpen}
 					onClose={handleCloseDetailDrawer}
 					onSendPasswordReset={handleSendPasswordReset}
+					onResendInvite={handleResendInvite}
 					onDeactivate={handleDeactivateUser}
 					onReactivate={handleReactivateUser}
 					onDelete={handleDeleteUser}

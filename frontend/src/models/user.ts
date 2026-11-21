@@ -61,13 +61,16 @@ export interface TeamMember {
 	created_at: string;
 }
 
-/** Invite a teammate — matches backend's InviteUserRequest exactly. No password is ever collected. */
+/** Create or invite a teammate with credentials */
 export interface InviteUserRequest {
 	username: string;
 	email: string;
 	full_name: string;
 	role: UserRole;
+	password?: string;
 }
+
+export type CreateTeamUserRequest = InviteUserRequest;
 
 export interface UpdateUserRequest {
 	username?: string;

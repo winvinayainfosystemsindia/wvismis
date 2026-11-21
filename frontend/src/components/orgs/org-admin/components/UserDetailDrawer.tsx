@@ -41,7 +41,7 @@ const getInitials = (name?: string, username?: string) => {
 };
 
 const getLastActiveString = (user: TeamMember) => {
-	if (!user.is_verified) return 'Never (Invite Pending)';
+	if (!user.is_verified) return 'Never';
 	if (!user.is_active) return 'Deactivated';
 	
 	// Create a stable pseudo-random recent time from the public_id

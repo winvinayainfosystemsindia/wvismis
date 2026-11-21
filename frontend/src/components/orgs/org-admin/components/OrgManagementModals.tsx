@@ -114,15 +114,11 @@ export const OrgManagementModals: React.FC<OrgManagementModalsProps> = ({
 				open={cancelDialogOpen}
 				onClose={onCancelInviteClose}
 				onConfirm={onConfirmCancelInvite}
-				title={targetUser?.is_verified ? 'Delete User' : 'Cancel Invite'}
-				subtitle={targetUser?.is_verified ? 'Permanently delete user account' : 'Remove pending team member invite'}
-				message={
-					targetUser?.is_verified
-						? `Are you sure you want to delete the user account for ${targetUser?.full_name || targetUser?.username}? This action is permanent, will revoke all their active sessions, and cannot be undone.`
-						: `Are you sure you want to cancel the invitation for ${targetUser?.full_name || targetUser?.username}? This will remove them from the system, and their invite link will no longer work.`
-				}
-				confirmLabel={targetUser?.is_verified ? 'Delete User' : 'Cancel Invite'}
-				cancelLabel={targetUser?.is_verified ? 'Cancel' : 'Keep Invite'}
+				title="Delete Teammate"
+				subtitle="Permanently delete user account"
+				message={`Are you sure you want to delete the account for ${targetUser?.full_name || targetUser?.username}? This action will revoke their access and cannot be undone.`}
+				confirmLabel="Delete Teammate"
+				cancelLabel="Cancel"
 				severity="error"
 				loading={cancelLoading}
 			/>

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Dialog, Box, TextField, MenuItem, Typography, InputAdornment, Chip } from '@mui/material';
-import { Person, Badge, MailOutline, AssignmentInd } from '@mui/icons-material';
+import { Dialog, Box, TextField, MenuItem, Typography, InputAdornment, Chip, IconButton } from '@mui/material';
+import { Person, Badge, MailOutline, AssignmentInd, LockOutlined, Visibility, VisibilityOff } from '@mui/icons-material';
 import { EnterpriseForm, type FormStep } from '../../../common/form';
 import { useAppDispatch } from '../../../../store/hooks';
 import { inviteTeamUser } from '../../../../store/slices/userSlice';
@@ -13,7 +13,14 @@ interface InviteOrgUserDialogProps {
 	onSuccess: (message: string) => void;
 }
 
-const initialForm = { username: '', email: '', full_name: '', role: 'member' as UserRole };
+const initialForm = {
+	username: '',
+	email: '',
+	full_name: '',
+	role: 'member' as UserRole,
+	password: '',
+	confirmPassword: '',
+};
 
 export const InviteOrgUserDialog: React.FC<InviteOrgUserDialogProps> = ({ open, onClose, onSuccess }) => {
 	const dispatch = useAppDispatch();
@@ -21,6 +28,8 @@ export const InviteOrgUserDialog: React.FC<InviteOrgUserDialogProps> = ({ open, 
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [usernameWarning, setUsernameWarning] = useState(false);
+	const [showPassword, setShowPassword] = useState(false);
+	const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
 	const [usernameStatus, setUsernameStatus] = useState<'idle' | 'validating' | 'available' | 'error'>('idle');
 	const [usernameMessage, setUsernameMessage] = useState('');
@@ -33,6 +42,8 @@ export const InviteOrgUserDialog: React.FC<InviteOrgUserDialogProps> = ({ open, 
 			setUsernameStatus('idle');
 			setUsernameMessage('');
 			setUsernameSuggestions([]);
+			setShowPassword(false);
+			setShowConfirmPassword(false);
 		}
 	}, [open]);
 
@@ -111,23 +122,41 @@ export const InviteOrgUserDialog: React.FC<InviteOrgUserDialogProps> = ({ open, 
 	};
 
 	const handleSubmit = async () => {
-		if (!formData.username.trim() || !formData.email.trim() || !formData.full_name.trim()) {
-			setError('All fields are required.');
+		if (!formData.username.trim() || !formData.email.trim() || !formData.full_name.trim() || !formData.password) {
+			setError('All fields including password are required.');
 			return;
 		}
 		if (!/^[a-z0-9_]+$/.test(formData.username)) {
 			setError('Username must be lowercase letters, numbers, and underscores only.');
 			return;
 		}
+		if (formData.password.length < 8) {
+			setError('Password must be at least 8 characters long.');
+			return;
+		}
+		if (!/[A-Z]/.test(formData.password) || !/[a-z]/.test(formData.password) || !/[0-9]/.test(formData.password)) {
+			setError('Password must contain at least one uppercase letter, one lowercase letter, and one number.');
+			return;
+		}
+		if (formData.password !== formData.confirmPassword) {
+			setError('Passwords do not match.');
+			return;
+		}
 
 		setLoading(true);
 		setError(null);
 		try {
-			await dispatch(inviteTeamUser(formData)).unwrap();
-			onSuccess(`Invite sent to ${formData.email}.`);
+			await dispatch(inviteTeamUser({
+				username: formData.username.trim().toLowerCase(),
+				email: formData.email.trim().toLowerCase(),
+				full_name: formData.full_name.trim(),
+				role: formData.role,
+				password: formData.password,
+			})).unwrap();
+			onSuccess(`Teammate ${formData.full_name || formData.username} created successfully with login credentials.`);
 			onClose();
 		} catch (err: any) {
-			setError(typeof err === 'string' ? err : 'Failed to send invite.');
+			setError(typeof err === 'string' ? err : 'Failed to create teammate.');
 		} finally {
 			setLoading(false);
 		}
@@ -135,12 +164,12 @@ export const InviteOrgUserDialog: React.FC<InviteOrgUserDialogProps> = ({ open, 
 
 	const steps: FormStep[] = [
 		{
-			label: 'Invite Teammate',
-			description: 'No password needed — they set their own',
+			label: 'Teammate Information & Credentials',
+			description: 'Create account and set initial password',
 			content: (
-				<Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+				<Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.2 }}>
 					<Typography variant="body2" color="text.secondary">
-						We'll email an invite link. They'll set their own password to activate the account.
+						Enter the teammate's details and set their login password. They can immediately log in with these credentials.
 					</Typography>
 					<TextField
 						required fullWidth label="Full Name" placeholder="e.g. John Doe" value={formData.full_name}
@@ -241,6 +270,67 @@ export const InviteOrgUserDialog: React.FC<InviteOrgUserDialogProps> = ({ open, 
 							</MenuItem>
 						))}
 					</TextField>
+
+					<TextField
+						required fullWidth
+						label="Password"
+						type={showPassword ? 'text' : 'password'}
+						placeholder="••••••••"
+						value={formData.password}
+						onChange={(e) => handleChange('password', e.target.value)}
+						disabled={loading}
+						helperText="Min. 8 characters with at least one uppercase letter, one lowercase letter, and one number"
+						InputProps={{
+							startAdornment: (
+								<InputAdornment position="start">
+									<LockOutlined sx={{ color: 'text.secondary', fontSize: 18, mr: 0.5 }} />
+								</InputAdornment>
+							),
+							endAdornment: (
+								<InputAdornment position="end">
+									<IconButton
+										size="small"
+										onClick={() => setShowPassword((prev) => !prev)}
+										edge="end"
+										aria-label={showPassword ? "Hide password" : "Show password"}
+									>
+										{showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+									</IconButton>
+								</InputAdornment>
+							),
+						}}
+					/>
+
+					<TextField
+						required fullWidth
+						label="Confirm Password"
+						type={showConfirmPassword ? 'text' : 'password'}
+						placeholder="••••••••"
+						value={formData.confirmPassword}
+						onChange={(e) => handleChange('confirmPassword', e.target.value)}
+						disabled={loading}
+						error={Boolean(formData.confirmPassword && formData.password !== formData.confirmPassword)}
+						helperText={formData.confirmPassword && formData.password !== formData.confirmPassword ? "Passwords do not match" : undefined}
+						InputProps={{
+							startAdornment: (
+								<InputAdornment position="start">
+									<LockOutlined sx={{ color: 'text.secondary', fontSize: 18, mr: 0.5 }} />
+								</InputAdornment>
+							),
+							endAdornment: (
+								<InputAdornment position="end">
+									<IconButton
+										size="small"
+										onClick={() => setShowConfirmPassword((prev) => !prev)}
+										edge="end"
+										aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+									>
+										{showConfirmPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+									</IconButton>
+								</InputAdornment>
+							),
+						}}
+					/>
 				</Box>
 			),
 		},
@@ -252,9 +342,9 @@ export const InviteOrgUserDialog: React.FC<InviteOrgUserDialogProps> = ({ open, 
 			PaperProps={{ sx: { borderRadius: 0, boxShadow: 'none', bgcolor: 'transparent' } }}
 		>
 			<EnterpriseForm
-				title="Invite Teammate" subtitle="Add a new member to your organization" mode="create"
+				title="Add Teammate" subtitle="Create a new user with credentials for your organization" mode="create"
 				steps={steps} onSave={handleSubmit} onCancel={onClose} isSubmitting={loading}
-				saveButtonText="Send Invite" error={error}
+				saveButtonText="Create Teammate" error={error}
 			/>
 		</Dialog>
 	);

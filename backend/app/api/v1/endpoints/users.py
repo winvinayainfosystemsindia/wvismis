@@ -329,6 +329,26 @@ async def invite_user(
     user_service = UserService(db)
     existing_user = await user_service.repository.get_by_email(email_clean, include_deleted=True)
 
+    # If admin provided a password, create/update directly as active & verified with credentials
+    if payload.get("password"):
+        if existing_user and not existing_user.is_deleted:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"User with email '{email_clean}' is already registered in the organization.",
+            )
+        user_in = UserCreate(
+            email=email_clean,
+            username=payload["username"],
+            full_name=payload.get("full_name"),
+            password=payload["password"],
+            role=role_enum,
+            is_active=True,
+            is_verified=True,
+        )
+        user = await user_service.create_user(user_in, forced_organization_id=current_org.id)
+        logger.info(f"Teammate {user.email} directly created with credentials in org {current_org.name}")
+        return user
+
     if existing_user:
         if existing_user.is_deleted:
             # Re-activate and restore previously deleted user

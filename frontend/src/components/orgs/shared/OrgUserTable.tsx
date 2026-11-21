@@ -119,7 +119,7 @@ export const OrgUserTable: React.FC<OrgUserTableProps> = ({
 				</TableCell>
 				{!isMobile && (
 					<TableCell>
-						<Chip label={user.is_verified ? 'Accepted' : 'Pending'} size="small" variant="outlined" color={user.is_verified ? 'success' : 'default'} sx={{ fontWeight: 600, fontSize: '0.7rem' }} />
+						<Chip label={user.is_verified ? 'Verified' : 'Pending'} size="small" variant="outlined" color={user.is_verified ? 'success' : 'default'} sx={{ fontWeight: 600, fontSize: '0.7rem' }} />
 					</TableCell>
 				)}
 			</TableRow>
@@ -131,8 +131,8 @@ export const OrgUserTable: React.FC<OrgUserTableProps> = ({
 			columns={columns} data={users} loading={loading} totalCount={total} page={page} rowsPerPage={rowsPerPage}
 			onPageChange={(_e, p) => setPage(p)} onRowsPerPageChange={(rows) => { setRowsPerPage(rows); setPage(0); }}
 			searchTerm={searchTerm} onSearchChange={handleSearchChange} searchPlaceholder="Search teammates..."
-			onRefresh={fetchData} onCreateClick={onAddUser} createButtonText="Invite Teammate"
-			renderRow={renderRow} emptyMessage="No teammates yet — invite your first one."
+			onRefresh={fetchData} onCreateClick={onAddUser} createButtonText="Add Teammate"
+			renderRow={renderRow} emptyMessage="No teammates yet — add your first one."
 			numSelected={selectedIds.length} onSelectAllClick={(e) => onSelectAll(e.target.checked)} headerActions={headerActions}
 		/>
 	);

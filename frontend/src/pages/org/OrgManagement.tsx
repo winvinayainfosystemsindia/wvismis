@@ -3,7 +3,7 @@ import { Box, Container, Grid } from '@mui/material';
 import {
 	People as PeopleIcon,
 	CheckCircleOutline as CheckCircleOutlineIcon,
-	MailOutline as MailOutlineIcon,
+	VerifiedUserOutlined as VerifiedUserIcon,
 	ManageAccounts as ManageAccountsIcon
 } from '@mui/icons-material';
 import { responsiveStyles } from '../../theme';
@@ -78,7 +78,7 @@ const OrgManagement: React.FC = () => {
 
 	const totalMembers = total;
 	const activeMembers = users.filter((u) => u.is_active).length;
-	const pendingInvites = users.filter((u) => !u.is_verified).length;
+	const verifiedMembers = users.filter((u) => u.is_verified).length;
 	const managerAdminCount = users.filter((u) => u.role === 'admin' || u.role === 'manager').length;
 
 	const statsCards = [
@@ -97,10 +97,10 @@ const OrgManagement: React.FC = () => {
 			color: '#10B981'
 		},
 		{
-			title: 'Pending Invites',
-			value: pendingInvites,
-			subtitle: 'Unverified email invitations',
-			icon: <MailOutlineIcon sx={{ color: '#F59E0B', fontSize: 26 }} />,
+			title: 'Verified Access',
+			value: verifiedMembers,
+			subtitle: 'Active login credentials',
+			icon: <VerifiedUserIcon sx={{ color: '#F59E0B', fontSize: 26 }} />,
 			color: '#F59E0B'
 		},
 		{
@@ -114,7 +114,7 @@ const OrgManagement: React.FC = () => {
 
 	const headerAction = (
 		<AddButton onClick={handleAddUser}>
-			Invite Teammate
+			Add Teammate
 		</AddButton>
 	);
 
@@ -124,7 +124,7 @@ const OrgManagement: React.FC = () => {
 
 				<PageHeader
 					title="Team"
-					subtitle="Invite teammates and manage who has access to your organization"
+					subtitle="Manage teammates and configure user access for your organization"
 					action={headerAction}
 				/>
 

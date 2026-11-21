@@ -111,13 +111,30 @@ class UserService:
         email_clean = user_in.email.lower().strip()
         existing_user = await self.repository.get_by_email(email_clean, include_deleted=True)
         if existing_user:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Email '{email_clean}' is already registered",
-            )
+            if existing_user.is_deleted:
+                # Restore previously soft-deleted user with the new password and organization
+                target_org_id = forced_organization_id if forced_organization_id is not None else (existing_user.organization_id or 1)
+                existing_user.is_deleted = False
+                existing_user.deleted_at = None
+                existing_user.is_active = True
+                existing_user.is_verified = True
+                existing_user.organization_id = target_org_id
+                existing_user.role = user_in.role
+                if user_in.full_name:
+                    existing_user.full_name = user_in.full_name
+                existing_user.username = user_in.username.strip()
+                existing_user.hashed_password = get_password_hash(user_in.password)
+                await self.repository.db.commit()
+                await self.repository.db.refresh(existing_user)
+                return existing_user
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Email '{email_clean}' is already registered",
+                )
 
         existing_username = await self.repository.get_by_username(user_in.username.strip(), include_deleted=True)
-        if existing_username:
+        if existing_username and not existing_username.is_deleted:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Username '{user_in.username}' is already taken",
@@ -136,6 +153,9 @@ class UserService:
         user_data["username"] = user_in.username.strip()
         user_data["hashed_password"] = get_password_hash(user_in.password)
         user_data["organization_id"] = org.id
+        if forced_organization_id is not None:
+            user_data["is_verified"] = True
+            user_data["is_active"] = True
 
         # If user created a brand new organization during self-registration, make them ORG_ADMIN
         if created_new_org and user_data.get("role") == UserRole.USER:

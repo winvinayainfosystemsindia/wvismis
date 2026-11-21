@@ -1,14 +1,9 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import {
 	TableRow, TableCell, Chip, Typography, useMediaQuery, useTheme,
-	Button, Checkbox, alpha, Box, IconButton, Tooltip
+	Button, Checkbox, alpha
 } from '@mui/material';
-import {
-	Delete,
-	Send as SendIcon,
-	EditOutlined as EditIcon,
-	DeleteOutline as DeleteIcon,
-} from '@mui/icons-material';
+import { Delete } from '@mui/icons-material';
 import { useAppDispatch, useAppSelector } from '../../../store/hooks';
 import { fetchTeamUsers } from '../../../store/slices/userSlice';
 import { type TeamMember, ROLE_LABELS } from '../../../models/user';
@@ -18,11 +13,11 @@ import { useOrgUserTableConfig, getRoleColor } from './OrgUserTableConfig';
 interface OrgUserTableProps {
 	refreshKey: number;
 	onAddUser?: () => void;
-	onEditUser: (user: TeamMember) => void;
-	onDeactivateUser: (user: TeamMember) => void;
-	onReactivateUser: (user: TeamMember) => void;
-	onResendInvite: (user: TeamMember) => void;
-	onDeleteUser: (user: TeamMember) => void;
+	onEditUser?: (user: TeamMember) => void;
+	onDeactivateUser?: (user: TeamMember) => void;
+	onReactivateUser?: (user: TeamMember) => void;
+	onResendInvite?: (user: TeamMember) => void;
+	onDeleteUser?: (user: TeamMember) => void;
 	selectedIds: string[];
 	onSelectId: (id: string, checked: boolean) => void;
 	onSelectAll: (checked: boolean) => void;
@@ -33,9 +28,6 @@ interface OrgUserTableProps {
 export const OrgUserTable: React.FC<OrgUserTableProps> = ({
 	refreshKey,
 	onAddUser,
-	onEditUser,
-	onResendInvite,
-	onDeleteUser,
 	selectedIds,
 	onSelectId,
 	onSelectAll,
@@ -130,44 +122,6 @@ export const OrgUserTable: React.FC<OrgUserTableProps> = ({
 						<Chip label={user.is_verified ? 'Accepted' : 'Pending'} size="small" variant="outlined" color={user.is_verified ? 'success' : 'default'} sx={{ fontWeight: 600, fontSize: '0.7rem' }} />
 					</TableCell>
 				)}
-				<TableCell align="right" onClick={(e) => e.stopPropagation()}>
-					<Box display="flex" alignItems="center" justifyContent="flex-end" gap={0.75}>
-						{!user.is_verified && (
-							<Tooltip title="Resend Invitation Email">
-								<Button
-									size="small"
-									variant="outlined"
-									color="info"
-									startIcon={<SendIcon sx={{ fontSize: '0.85rem !important' }} />}
-									onClick={() => onResendInvite(user)}
-									sx={{
-										textTransform: 'none',
-										fontWeight: 600,
-										fontSize: '0.75rem',
-										py: 0.25,
-										px: 1,
-										borderRadius: 1.5,
-										whiteSpace: 'nowrap',
-									}}
-								>
-									Resend
-								</Button>
-							</Tooltip>
-						)}
-						<Tooltip title="Edit Details">
-							<IconButton size="small" onClick={() => onEditUser(user)}>
-								<EditIcon fontSize="small" sx={{ fontSize: '1rem' }} />
-							</IconButton>
-						</Tooltip>
-						{!isSelf && (
-							<Tooltip title={user.is_verified ? "Delete User" : "Cancel Invitation"}>
-								<IconButton size="small" color="error" onClick={() => onDeleteUser(user)}>
-									<DeleteIcon fontSize="small" sx={{ fontSize: '1rem' }} />
-								</IconButton>
-							</Tooltip>
-						)}
-					</Box>
-				</TableCell>
 			</TableRow>
 		);
 	};

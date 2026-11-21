@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams } from '../../../router/tanstackCompat';
 import { Container, Box, Typography, CircularProgress, Paper, Stack, LinearProgress, Divider, useTheme, Fade, alpha } from '@mui/material';
 import { ErrorOutline as ErrorIcon, CalendarMonthOutlined, BusinessOutlined, TaskAltOutlined } from '@mui/icons-material';
 import dayjs from 'dayjs';

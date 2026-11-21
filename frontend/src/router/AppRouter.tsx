@@ -1,5 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import React from 'react';
+import { Container, Typography, Button } from '@mui/material';
 import {
 	createRootRoute,
 	createRoute,
@@ -57,6 +58,22 @@ const rootRoute = createRootRoute({
 		</AuthProvider>
 	),
 	notFoundComponent: NotFoundPage,
+	errorComponent: ({ error }) => {
+		console.error('Unhandled Route Error:', error);
+		return (
+			<Container maxWidth="md" sx={{ py: 8, textAlign: 'center' }}>
+				<Typography variant="h4" color="error" gutterBottom sx={{ fontWeight: 700 }}>
+					Something went wrong
+				</Typography>
+				<Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+					{error instanceof Error ? error.message : 'An unexpected error occurred.'}
+				</Typography>
+				<Button variant="contained" onClick={() => (window.location.href = '/')}>
+					Reload Application
+				</Button>
+			</Container>
+		);
+	},
 });
 
 // ── 2. Public & Auth Routes ─────────────────────────────────────────────────

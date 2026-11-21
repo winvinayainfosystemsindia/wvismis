@@ -1,7 +1,7 @@
 import React from 'react';
 import { Box, Typography } from '@mui/material';
 import { useTheme, alpha } from '@mui/material/styles';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from '../../router/tanstackCompat';
 import {
 	CheckCircle as CheckCircleIcon,
 	RadioButtonUnchecked as PendingIcon,

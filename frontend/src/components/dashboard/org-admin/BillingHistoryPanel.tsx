@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink } from '../../../router/tanstackCompat';
 import { Card, CardContent, Typography, Box, useTheme, Link, Chip, alpha } from '@mui/material';
 import { Receipt, ChevronRight, Download } from '@mui/icons-material';
 import { useAppSelector } from '../../../store/hooks';

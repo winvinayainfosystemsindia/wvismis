@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink } from '../../../router/tanstackCompat';
 import { Card, CardContent, Typography, Box, useTheme, alpha, ButtonBase } from '@mui/material';
 import { PersonAdd, ManageAccounts, Settings, Bolt, CorporateFare, Shield } from '@mui/icons-material';
 

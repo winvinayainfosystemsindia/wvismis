@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Box, Typography, Button } from '@mui/material';
 import { CheckCircleOutline as CheckCircleIcon } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from '../../../../router/tanstackCompat';
 import EmailOtpForm from '../../EmailOtpForm';
 
 interface SuccessStepProps {

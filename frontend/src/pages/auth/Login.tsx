@@ -3,7 +3,7 @@ import {
 	Box,
 	Fade,
 } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from '../../router/tanstackCompat';
 import useToast from '../../hooks/useToast';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { loginUser, clearError } from '../../store/slices/authSlice';

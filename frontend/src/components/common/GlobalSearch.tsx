@@ -18,7 +18,7 @@ import {
 import {
 	Search as SearchIcon
 } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from '../../router/tanstackCompat';
 import { useSearchActions } from '../../hooks/useSearchActions';
 import type { SearchAction } from '../../hooks/useSearchActions';
 

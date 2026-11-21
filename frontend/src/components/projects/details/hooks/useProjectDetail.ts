@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, useSearchParams } from '../../../../router/tanstackCompat';
 import { useAppDispatch, useAppSelector } from '../../../../store/hooks';
 import {
 	fetchProject,

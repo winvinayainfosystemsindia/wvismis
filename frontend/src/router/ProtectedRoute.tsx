@@ -1,5 +1,5 @@
 import React from 'react';
-import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from './tanstackCompat';
 import { useAppSelector } from '../store/hooks';
 import { Spinner } from '../components/common/spinner';
 import { getRouteConfig } from '../config/navigation';

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams, useNavigate } from '../../../router/tanstackCompat';
 import { Box, Typography, Button, Fade } from '@mui/material';
 import { CheckCircleOutline as CheckCircleIcon } from '@mui/icons-material';
 import AuthBrandPanel from '../../../components/layout/AuthBrandPanel';

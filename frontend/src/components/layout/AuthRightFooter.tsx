@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Link } from '@mui/material';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink } from '../../router/tanstackCompat';
 
 const items = [
 	{ label: 'Terms of Service', to: '/terms' },

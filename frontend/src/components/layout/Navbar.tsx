@@ -12,7 +12,7 @@ import {
 	BoltOutlined as CreditsIcon,
 } from '@mui/icons-material';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from '../../router/tanstackCompat';
 import { toggleSidebar } from '../../store/slices/uiSlice';
 import { useColorMode } from '../../theme/ThemeContext';
 import GlobalSearch from '../common/GlobalSearch';

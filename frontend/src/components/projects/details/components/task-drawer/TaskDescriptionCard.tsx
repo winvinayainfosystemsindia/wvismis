@@ -31,7 +31,7 @@ import {
 	AutoAwesome,
 } from '@mui/icons-material';
 import dayjs from 'dayjs';
-import { useParams } from 'react-router-dom';
+import { useParams } from '../../../../../router/tanstackCompat';
 import type { ProjectTask, ProjectTaskUpdate, ProjectTaskFile } from '../../../../../models/projects/projectTask';
 import type { CRMOwnerOption } from '../../../../../models/crm/owner';
 import { RichTextEditor, RichTextViewer } from '../../../../common/form';

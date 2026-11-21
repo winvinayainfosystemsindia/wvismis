@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink } from '../../../router/tanstackCompat';
 import { Card, CardContent, Typography, Box, useTheme, Skeleton, Link, LinearProgress } from '@mui/material';
 import { GroupsOutlined, ChevronRight } from '@mui/icons-material';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Breadcrumbs as MuiBreadcrumbs, Link, Typography, Box, alpha, useTheme } from '@mui/material';
-import { Link as RouterLink, useLocation } from 'react-router-dom';
+import { Link as RouterLink, useLocation } from '../../../router/tanstackCompat';
 import {
 	NavigateNext as NavigateNextIcon,
 	Home as HomeIcon,

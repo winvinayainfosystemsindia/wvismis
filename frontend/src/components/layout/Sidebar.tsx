@@ -22,7 +22,7 @@ import {
 	HeadsetMicOutlined as SupportIcon,
 	BoltOutlined as CreditsIcon,
 } from '@mui/icons-material';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation } from '../../router/tanstackCompat';
 import { useAppSelector, useAppDispatch } from '../../store/hooks';
 import { useTheme, alpha } from '@mui/material/styles';
 import { useMediaQuery } from '@mui/material';

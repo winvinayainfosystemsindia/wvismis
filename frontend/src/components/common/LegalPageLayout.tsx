@@ -2,7 +2,7 @@ import React from 'react';
 import { Box, Container, Typography, Button } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { ArrowBack } from '@mui/icons-material';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink } from '../../router/tanstackCompat';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import Footer from '../layout/Footer';

@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { Box, CssBaseline } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet, useLocation } from '../../router/tanstackCompat';
 import Navbar from './Navbar';
 import Sidebar from './Sidebar';
 import Footer from './Footer';

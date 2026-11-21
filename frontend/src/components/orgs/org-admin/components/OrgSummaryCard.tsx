@@ -2,7 +2,7 @@ import React from 'react';
 import { Card, CardContent, Typography, Box, useTheme, alpha, Avatar, Chip, LinearProgress, Button } from '@mui/material';
 import { CreditCard as BillingIcon, People as PeopleIcon, Stars as PlanIcon } from '@mui/icons-material';
 import { useAppSelector } from '../../../../store/hooks';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from '../../../../router/tanstackCompat';
 
 export const OrgSummaryCard: React.FC = () => {
 	const theme = useTheme();

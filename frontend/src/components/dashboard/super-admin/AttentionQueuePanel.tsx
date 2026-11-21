@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink } from '../../../router/tanstackCompat';
 import { Card, CardContent, Typography, Box, useTheme, Skeleton, Link, alpha } from '@mui/material';
 import { NotificationsActive, ChevronRight, TaskAlt } from '@mui/icons-material';
 import { useAppDispatch } from '../../../store/hooks';

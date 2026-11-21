@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { IconButton, Badge, Menu, MenuItem, Box, Typography, Stack, Divider, Button, CircularProgress } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { Notifications as NotificationsIcon, CircleNotifications } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from '../../router/tanstackCompat';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import {
 	fetchNotifications,

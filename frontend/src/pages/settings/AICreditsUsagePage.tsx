@@ -34,7 +34,7 @@ import {
 	ShoppingBagOutlined as BuyIcon,
 } from '@mui/icons-material';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from '../../router/tanstackCompat';
 import PageHeader from '../../components/common/page-header';
 import useToast from '../../hooks/useToast';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';

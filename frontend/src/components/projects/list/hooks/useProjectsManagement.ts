@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
+import { useSearchParams, useNavigate, useLocation } from '../../../../router/tanstackCompat';
 import { useAppDispatch, useAppSelector } from '../../../../store/hooks';
 import { fetchProjects, fetchProjectStats, createProject, deleteProject, bulkUpdateProjects } from '../../../../store/slices/projectsSlice';
 import { fetchOwners } from '../../../../store/slices/crmSlice';

@@ -8,7 +8,7 @@ import { useAppDispatch, useAppSelector } from '../../../../store/hooks';
 import { updateProjectTask, addTaskComment, uploadTaskFile } from '../../../../store/slices/projectsSlice';
 import type { ProjectTask, ProjectTaskUpdate, ProjectTaskStatus, ProjectTaskTag } from '../../../../models/projects/projectTask';
 import type { CRMOwnerOption } from '../../../../models/crm/owner';
-import { useParams } from 'react-router-dom';
+import { useParams } from '../../../../router/tanstackCompat';
 
 // Import Decomposed task drawer sub-components
 import { TaskDrawerHeader } from '../components/task-drawer/TaskDrawerHeader';

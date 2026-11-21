@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from '../../../../router/tanstackCompat';
 import { Box, Paper, Stack, Typography, Chip, useTheme } from '@mui/material';
 import { NotificationImportantOutlined, WarningAmberOutlined } from '@mui/icons-material';
 import dayjs from 'dayjs';

@@ -108,7 +108,7 @@ flowchart TD
    - `PORT=8000`
    - `POSTGRES_DB=wvismis_dev`
    - `POSTGRES_USER=wvismis_user`
-   - `POSTGRES_PASSWORD=WinVinayaDb#2026`
+   - `POSTGRES_PASSWORD=winvinayamisdb2026`
    - `BACKEND_CORS_ORIGINS=https://dev-mis.winvinaya.com,http://localhost:5173`
    - `SMTP_USER=no-reply@winvinaya.com`
    - `SMTP_PASSWORD=Admin##2025@`
@@ -122,7 +122,7 @@ flowchart TD
    - `PORT=8002`
    - `POSTGRES_DB=wvismis_prod`
    - `POSTGRES_USER=wvismis_user`
-   - `POSTGRES_PASSWORD=WinVinayaDb#2026`
+   - `POSTGRES_PASSWORD=winvinayamisdb2026`
    - `BACKEND_CORS_ORIGINS=https://mis.winvinaya.com,https://www.mis.winvinaya.com`
    - Generate strong secret key: `openssl rand -hex 32`
 

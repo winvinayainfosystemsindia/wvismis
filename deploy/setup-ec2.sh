@@ -96,7 +96,7 @@ sudo -u postgres psql << EOF
 DO \$\$
 BEGIN
    IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'wvismis_user') THEN
-      CREATE ROLE wvismis_user WITH LOGIN PASSWORD 'WinVinayaDb#2026';
+      CREATE ROLE wvismis_user WITH LOGIN PASSWORD 'winvinayamisdb2026';
    END IF;
 END
 \$\$;

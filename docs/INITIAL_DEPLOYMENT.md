@@ -62,19 +62,19 @@ If using Windows, fix file permissions on your `.pem` key before connecting:
 
 ```powershell
 # Reset and restrict access to current user only
-icacls.exe winvinaya-ec2.pem /reset
-icacls.exe winvinaya-ec2.pem /inheritance:r
-icacls.exe winvinaya-ec2.pem /grant:r "$($env:USERNAME):(R)"
+icacls.exe wvismis.pem /reset
+icacls.exe wvismis.pem /inheritance:r
+icacls.exe wvismis.pem /grant:r "$($env:USERNAME):(R)"
 
 # Connect to EC2
-ssh -i winvinaya-ec2.pem ubuntu@YOUR_EC2_ELASTIC_IP
+ssh -i wvismis.pem ubuntu@YOUR_EC2_ELASTIC_IP
 ```
 
 ### Linux / macOS
 
 ```bash
-chmod 400 winvinaya-ec2.pem
-ssh -i winvinaya-ec2.pem ubuntu@YOUR_EC2_ELASTIC_IP
+chmod 400 wvismis.pem
+ssh -i wvismis.pem ubuntu@YOUR_EC2_ELASTIC_IP
 ```
 
 ---
@@ -153,7 +153,7 @@ Run the following SQL commands:
 
 ```sql
 -- 1. Create dedicated application user
-CREATE USER wvismis_user WITH LOGIN PASSWORD 'WinVinayaDb#2026';
+CREATE USER wvismis_user WITH LOGIN PASSWORD 'winvinayamisdb2026';
 ALTER ROLE wvismis_user CREATEDB;
 
 -- 2. Create Development and Production databases
@@ -189,7 +189,7 @@ sudo chown -R ubuntu:ubuntu /var/www/wvismis
 cd /var/www/wvismis
 
 # Clone via HTTPS or SSH
-git clone <YOUR_GIT_REPO_URL> .
+git clone https://github.com/winvinayainfosystemsindia/wvismis.git .
 chmod +x deploy/*.sh
 ```
 
@@ -218,7 +218,7 @@ HOST=127.0.0.1
 POSTGRES_SERVER=localhost
 POSTGRES_PORT=5432
 POSTGRES_USER=wvismis_user
-POSTGRES_PASSWORD=WinVinayaDb#2026
+POSTGRES_PASSWORD=winvinayamisdb2026
 POSTGRES_DB=wvismis_dev
 
 SECRET_KEY=generate_with_openssl_rand_hex_32
@@ -252,7 +252,7 @@ DEBUG=False
 POSTGRES_SERVER=localhost
 POSTGRES_PORT=5432
 POSTGRES_USER=wvismis_user
-POSTGRES_PASSWORD=WinVinayaDb#2026
+POSTGRES_PASSWORD=winvinayamisdb2026
 POSTGRES_DB=wvismis_prod
 
 SECRET_KEY=generate_with_openssl_rand_hex_32

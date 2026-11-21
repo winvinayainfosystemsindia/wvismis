@@ -95,3 +95,39 @@ def decode_token(token: str) -> Optional[Dict[str, Any]]:
 def verify_token_type(payload: Dict[str, Any], token_type: str) -> bool:
     """Verify that a decoded JWT payload matches the expected token type ('access' or 'refresh')."""
     return payload.get("type") == token_type
+
+
+def create_action_token(
+    data: Dict[str, Any],
+    action_type: str,
+    expires_delta: Optional[timedelta] = None,
+) -> str:
+    """
+    Create a signed action JWT token (e.g. 'invite', 'password_reset').
+    Defaults to 7 days for invite and 1 hour for password reset.
+    """
+    to_encode = data.copy()
+    now = datetime.now(timezone.utc)
+
+    if expires_delta:
+        expire = now + expires_delta
+    elif action_type == "invite":
+        expire = now + timedelta(days=7)
+    elif action_type == "password_reset":
+        expire = now + timedelta(hours=1)
+    else:
+        expire = now + timedelta(hours=24)
+
+    to_encode.update({
+        "exp": expire,
+        "iat": now,
+        "jti": to_encode.get("jti") or str(uuid.uuid4()),
+        "type": action_type,
+    })
+
+    return jwt.encode(
+        to_encode,
+        settings.SECRET_KEY,
+        algorithm=settings.ALGORITHM,
+    )
+

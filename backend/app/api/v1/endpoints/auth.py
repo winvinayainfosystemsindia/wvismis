@@ -12,8 +12,10 @@ from app.core.config import settings
 from app.core.security import (
     create_access_token,
     create_refresh_token,
+    create_action_token,
     decode_token,
     verify_token_type,
+    get_password_hash,
 )
 from app.core.rate_limiter import rate_limit_auth, rate_limit_medium
 from app.schemas.user import (
@@ -26,10 +28,14 @@ from app.schemas.user import (
     VerifyTokenResponse,
     ChangePasswordRequest,
     LogoutRequest,
+    ForgotPasswordRequest,
+    ResetPasswordRequest,
+    AcceptInviteRequest,
 )
 from app.services.user_service import UserService
 from app.repositories.token_blacklist_repository import TokenBlacklistRepository
 from app.utils.activity_tracker import log_create, log_login, log_logout, log_update
+from app.utils.email import send_email, render_template
 from app.api.deps import get_current_user, security
 from app.models.user import User
 
@@ -431,3 +437,181 @@ async def get_authenticated_me(
 ):
     """Returns the authenticated user's profile and embedded Organization summary."""
     return current_user
+
+
+@router.post(
+    "/forgot-password",
+    summary="Request a password reset link sent to email",
+)
+@rate_limit_auth()
+async def forgot_password(
+    request: Request,
+    payload: ForgotPasswordRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Generate a 1-hour password reset token and dispatch an email to the user.
+    Always returns a 200 OK generic message to prevent email enumeration.
+    """
+    email_clean = payload.email.strip().lower()
+    logger.info(f"Password reset requested for: {email_clean}")
+
+    user_service = UserService(db)
+    user = await user_service.repository.get_by_email(email_clean)
+
+    if user and not user.is_deleted:
+        reset_token = create_action_token(
+            data={"sub": str(user.id), "email": user.email},
+            action_type="password_reset",
+            expires_delta=timedelta(hours=1),
+        )
+        origin = request.headers.get("origin") or getattr(settings, "FRONTEND_URL", None) or "https://dev-mis.winvinaya.com"
+        reset_url = f"{origin.rstrip('/')}/auth/reset-password?token={reset_token}"
+
+        html_content = render_template(
+            "password_reset.html",
+            {
+                "user_name": user.full_name or user.username,
+                "user_email": user.email,
+                "reset_url": reset_url,
+            },
+        )
+        try:
+            await send_email(
+                to_email=user.email,
+                subject="Reset Your Password - WinVinaya MIS",
+                html_content=html_content,
+            )
+        except Exception as exc:
+            logger.error(f"Failed to send password reset email to {user.email}: {exc}")
+
+    return {
+        "message": "If an account exists with this email address, a password reset link has been sent to your inbox."
+    }
+
+
+@router.post(
+    "/reset-password",
+    summary="Reset password using a valid action token",
+)
+@rate_limit_auth()
+async def reset_password(
+    request: Request,
+    payload: ResetPasswordRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Verify password reset token and apply new password."""
+    token_payload = decode_token(payload.token)
+    if not token_payload or token_payload.get("type") != "password_reset":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid, expired, or malformed password reset token.",
+        )
+
+    user_id_str = token_payload.get("sub")
+    email_str = token_payload.get("email")
+
+    user_service = UserService(db)
+    user = None
+    if user_id_str and str(user_id_str).isdigit():
+        user = await user_service.repository.get(int(user_id_str))
+    elif email_str:
+        user = await user_service.repository.get_by_email(email_str)
+
+    if not user or user.is_deleted:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User account associated with this token no longer exists.",
+        )
+
+    user.hashed_password = get_password_hash(payload.new_password)
+    await db.commit()
+
+    await log_update(
+        db=db,
+        request=request,
+        organization_id=user.organization_id,
+        user_id=user.id,
+        resource_type="user",
+        resource_id=user.id,
+        before={"password": "old"},
+        after={"password": "reset_via_token"},
+    )
+
+    return {"message": "Password updated successfully. You may now log in with your new password."}
+
+
+@router.post(
+    "/accept-invite",
+    response_model=Token,
+    summary="Accept team invitation, set password, and auto-login",
+)
+@rate_limit_auth()
+async def accept_invite(
+    request: Request,
+    payload: AcceptInviteRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Verify 7-day invite action token, activate and verify user account,
+    store strong password, and return JWT credentials for immediate login.
+    """
+    token_payload = decode_token(payload.token)
+    if not token_payload or token_payload.get("type") != "invite":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid, expired, or malformed invitation link.",
+        )
+
+    user_id_str = token_payload.get("sub")
+    email_str = token_payload.get("email")
+
+    user_service = UserService(db)
+    user = None
+    if user_id_str and str(user_id_str).isdigit():
+        user = await user_service.repository.get(int(user_id_str))
+    elif email_str:
+        user = await user_service.repository.get_by_email(email_str)
+
+    if not user or user.is_deleted:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="The invited user account was not found or has been revoked.",
+        )
+
+    user.hashed_password = get_password_hash(payload.new_password)
+    user.is_verified = True
+    user.is_active = True
+    await db.commit()
+    await db.refresh(user)
+
+    user_response = UserResponse.model_validate(user)
+    token_claims = {
+        "sub": str(user.id),
+        "org_id": user.organization_id,
+        "role": user.role.value,
+    }
+    access_token = create_access_token(
+        data=token_claims,
+        expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
+    )
+    refresh_token = create_refresh_token(
+        data=token_claims,
+        expires_delta=timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES),
+    )
+
+    await log_login(
+        db=db,
+        request=request,
+        organization_id=user.organization_id,
+        user_id=user.id,
+    )
+
+    return Token(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        token_type="bearer",
+        expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        organization_id=user.organization_id,
+        user=user_response,
+    )

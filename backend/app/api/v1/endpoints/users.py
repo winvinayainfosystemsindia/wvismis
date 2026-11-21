@@ -1,19 +1,23 @@
 """User endpoints — Multi-tenant scoped user administration and self-service profile endpoints"""
 
+from datetime import datetime, timezone, timedelta
 from typing import List, Optional
-from fastapi import APIRouter, Depends, status, Query, Request
+from fastapi import APIRouter, Depends, status, Query, Request, HTTPException
 from sqlalchemy import select, func, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from loguru import logger
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.rate_limiter import rate_limit_medium
+from app.core.security import create_action_token
 from app.api.deps import get_current_user, get_current_organization, require_roles
 from app.models.user import User, UserRole
 from app.models.organization import Organization
 from app.schemas.user import UserResponse, UserUpdate, UserCreate, PaginatedResponse
 from app.services.user_service import UserService
 from app.utils.activity_tracker import log_update, log_delete, log_create
+from app.utils.email import send_email, render_template
 
 
 router = APIRouter(prefix="/users", tags=["Users"])
@@ -311,7 +315,7 @@ async def invite_user(
     current_org: Organization = Depends(get_current_organization),
     db: AsyncSession = Depends(get_db),
 ):
-    """Invite a new user into the active Organization."""
+    """Invite a new user into the active Organization and send them an invite email."""
     role_str = payload.get("role", "member").lower()
     if role_str == "user":
         role_enum = UserRole.MEMBER
@@ -332,6 +336,35 @@ async def invite_user(
     )
     user_service = UserService(db)
     user = await user_service.create_user(user_in, forced_organization_id=current_org.id)
+
+    # Generate 7-day action token for invitation acceptance
+    invite_token = create_action_token(
+        data={"sub": str(user.id), "email": user.email},
+        action_type="invite",
+        expires_delta=timedelta(days=7),
+    )
+    origin = request.headers.get("origin") or getattr(settings, "FRONTEND_URL", None) or "https://dev-mis.winvinaya.com"
+    invite_url = f"{origin.rstrip('/')}/auth/accept-invite?token={invite_token}"
+
+    html_content = render_template(
+        "user_invite.html",
+        {
+            "org_name": current_org.name,
+            "inviter_name": current_user.full_name or current_user.username or "Admin",
+            "user_name": user.full_name or user.username,
+            "invite_url": invite_url,
+        },
+    )
+    try:
+        await send_email(
+            to_email=user.email,
+            subject=f"Invitation to join {current_org.name} on WinVinaya MIS",
+            html_content=html_content,
+        )
+        logger.info(f"Invitation email dispatched successfully to {user.email}")
+    except Exception as exc:
+        logger.error(f"Failed to dispatch invitation email to {user.email}: {exc}")
+
     return user
 
 
@@ -350,16 +383,21 @@ async def bulk_delete_users(
     public_ids = payload.get("public_ids") or []
     is_super = current_user.is_superuser or current_user.role == UserRole.SUPER_ADMIN
     org_filter = None if is_super else current_org.id
-    user_service = UserService(db)
     deleted_count = 0
+    now = datetime.now(timezone.utc)
     for pid in public_ids:
         try:
             u = await _resolve_user_by_ref(db, str(pid), organization_id=org_filter)
             if u.id != current_user.id:
-                await user_service.delete_user(u.id, organization_id=org_filter)
+                u.is_deleted = True
+                u.is_active = False
+                u.deleted_at = now
                 deleted_count += 1
-        except Exception:
+        except Exception as e:
+            logger.warning(f"Error deleting user {pid}: {e}")
             continue
+    if deleted_count > 0:
+        await db.commit()
     return {"message": f"Deleted {deleted_count} user(s)", "deleted_count": deleted_count}
 
 
@@ -485,9 +523,39 @@ async def resend_user_invite(
     current_org: Organization = Depends(get_current_organization),
     db: AsyncSession = Depends(get_db),
 ):
+    """Resend the 7-day invitation email to an unverified teammate."""
     is_super = current_user.is_superuser or current_user.role == UserRole.SUPER_ADMIN
     org_filter = None if is_super else current_org.id
-    return await _resolve_user_by_ref(db, user_id, organization_id=org_filter)
+    user = await _resolve_user_by_ref(db, user_id, organization_id=org_filter)
+
+    invite_token = create_action_token(
+        data={"sub": str(user.id), "email": user.email},
+        action_type="invite",
+        expires_delta=timedelta(days=7),
+    )
+    origin = request.headers.get("origin") or getattr(settings, "FRONTEND_URL", None) or "https://dev-mis.winvinaya.com"
+    invite_url = f"{origin.rstrip('/')}/auth/accept-invite?token={invite_token}"
+
+    html_content = render_template(
+        "user_invite.html",
+        {
+            "org_name": current_org.name,
+            "inviter_name": current_user.full_name or current_user.username or "Admin",
+            "user_name": user.full_name or user.username,
+            "invite_url": invite_url,
+        },
+    )
+    try:
+        await send_email(
+            to_email=user.email,
+            subject=f"Invitation reminder: Join {current_org.name} on WinVinaya MIS",
+            html_content=html_content,
+        )
+        logger.info(f"Resent invitation email to {user.email}")
+    except Exception as exc:
+        logger.error(f"Failed to resend invitation email to {user.email}: {exc}")
+
+    return user
 
 
 @router.post("/{user_id}/reset-password", response_model=UserResponse, summary="Trigger password reset")
@@ -501,9 +569,38 @@ async def trigger_user_password_reset(
     current_org: Organization = Depends(get_current_organization),
     db: AsyncSession = Depends(get_db),
 ):
+    """Send a password reset email to a team member."""
     is_super = current_user.is_superuser or current_user.role == UserRole.SUPER_ADMIN
     org_filter = None if is_super else current_org.id
-    return await _resolve_user_by_ref(db, user_id, organization_id=org_filter)
+    user = await _resolve_user_by_ref(db, user_id, organization_id=org_filter)
+
+    reset_token = create_action_token(
+        data={"sub": str(user.id), "email": user.email},
+        action_type="password_reset",
+        expires_delta=timedelta(hours=1),
+    )
+    origin = request.headers.get("origin") or getattr(settings, "FRONTEND_URL", None) or "https://dev-mis.winvinaya.com"
+    reset_url = f"{origin.rstrip('/')}/auth/reset-password?token={reset_token}"
+
+    html_content = render_template(
+        "password_reset.html",
+        {
+            "user_name": user.full_name or user.username,
+            "user_email": user.email,
+            "reset_url": reset_url,
+        },
+    )
+    try:
+        await send_email(
+            to_email=user.email,
+            subject="Reset Your Password - WinVinaya MIS",
+            html_content=html_content,
+        )
+        logger.info(f"Admin triggered password reset email for {user.email}")
+    except Exception as exc:
+        logger.error(f"Failed to send password reset email to {user.email}: {exc}")
+
+    return user
 
 
 @router.delete(
@@ -526,8 +623,17 @@ async def delete_user(
     org_filter = None if is_super else current_org.id
 
     target = await _resolve_user_by_ref(db, user_id, organization_id=org_filter)
-    user_service = UserService(db)
-    await user_service.delete_user(target.id, organization_id=org_filter)
+    if target.id == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You cannot delete your own account.",
+        )
+
+    target.is_deleted = True
+    target.is_active = False
+    target.deleted_at = datetime.now(timezone.utc)
+    await db.commit()
+    await db.refresh(target)
 
     await log_delete(
         db=db,

@@ -14,19 +14,51 @@ class UserRepository(BaseRepository[User]):
     def __init__(self, db: AsyncSession):
         super().__init__(User, db)
 
+    async def get_by_id(
+        self,
+        user_id: int,
+        include_deleted: bool = False,
+        organization_id: Optional[int] = None,
+    ) -> Optional[User]:
+        """Lookup by primary key ID (supports both repo.get_by_id(id) and UserRepository.get_by_id(db, id))"""
+        db = self if isinstance(self, AsyncSession) else self.db
+        query = select(User).options(selectinload(User.organization)).where(User.id == user_id)
+        if not include_deleted:
+            query = query.where(User.is_deleted == False)
+        if organization_id is not None:
+            query = query.where(User.organization_id == organization_id)
+        result = await db.execute(query)
+        return result.scalar_one_or_none()
+
+    async def get_by_public_id(
+        self,
+        public_id: Any,
+        include_deleted: bool = False,
+        organization_id: Optional[int] = None,
+    ) -> Optional[User]:
+        """Lookup by UUID public_id (supports both repo.get_by_public_id(pid) and UserRepository.get_by_public_id(db, pid))"""
+        db = self if isinstance(self, AsyncSession) else self.db
+        query = select(User).options(selectinload(User.organization)).where(User.public_id == public_id)
+        if not include_deleted:
+            query = query.where(User.is_deleted == False)
+        if organization_id is not None:
+            query = query.where(User.organization_id == organization_id)
+        result = await db.execute(query)
+        return result.scalar_one_or_none()
+
     @staticmethod
-    async def get_by_id(db: AsyncSession, user_id: int) -> Optional[User]:
-        """Static lookup by primary key ID"""
+    async def lookup_by_public_id(db: AsyncSession, public_id: Any) -> Optional[User]:
+        """Static lookup helper by UUID public_id"""
         result = await db.execute(
-            select(User).options(selectinload(User.organization)).where(User.id == user_id, User.is_deleted == False)
+            select(User).options(selectinload(User.organization)).where(User.public_id == public_id, User.is_deleted == False)
         )
         return result.scalar_one_or_none()
 
     @staticmethod
-    async def get_by_public_id(db: AsyncSession, public_id) -> Optional[User]:
-        """Static lookup by UUID public_id"""
+    async def lookup_by_id(db: AsyncSession, user_id: int) -> Optional[User]:
+        """Static lookup helper by integer ID"""
         result = await db.execute(
-            select(User).options(selectinload(User.organization)).where(User.public_id == public_id, User.is_deleted == False)
+            select(User).options(selectinload(User.organization)).where(User.id == user_id, User.is_deleted == False)
         )
         return result.scalar_one_or_none()
 

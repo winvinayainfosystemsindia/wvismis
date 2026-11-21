@@ -25,38 +25,41 @@ This comprehensive guide covers the end-to-end process of provisioning, configur
 
 ## 1. EC2 Instance Requirements & Security Groups
 
-### Recommended Hardware Specifications
+### Hardware Specifications
+
 - **Operating System**: Ubuntu 22.04 LTS or 24.04 LTS (64-bit x86)
-- **Instance Type**: 
-  - `t3.medium` (Recommended: 2 vCPU, 4GB RAM)
-  - `t3.small` (Minimum: 2 vCPU, 2GB RAM — requires 4GB swap space enabled)
-- **Storage**: 30GB to 50GB gp3 SSD
+- **Instance Type**:
+  - `t3.small` / `t3a.small` (2 vCPU, 2GB RAM — perfectly tuned for 10 users with 4GB swap space)
+  - `t3.medium` (Optional scale-up: 2 vCPU, 4GB RAM)
+- **Storage**: 20GB to 30GB gp3 SSD
 - **Networking**: Allocate and associate an **Elastic IP** to your EC2 instance so your public IP address remains static.
 
 ### Inbound Security Group Rules
 
-| Type | Protocol | Port Range | Source | Description |
-| :--- | :--- | :--- | :--- | :--- |
-| **SSH** | TCP | `22` | Your IP / Bastion | Secure CLI access |
-| **HTTP** | TCP | `80` | `0.0.0.0/0` | Let's Encrypt verification & HTTP to HTTPS redirect |
-| **HTTPS** | TCP | `443` | `0.0.0.0/0` | Secure SSL web traffic |
+| Type      | Protocol | Port Range | Source            | Description                                         |
+| :-------- | :------- | :--------- | :---------------- | :-------------------------------------------------- |
+| **SSH**   | TCP      | `22`       | Your IP / Bastion | Secure CLI access                                   |
+| **HTTP**  | TCP      | `80`       | `0.0.0.0/0`       | Let's Encrypt verification & HTTP to HTTPS redirect |
+| **HTTPS** | TCP      | `443`      | `0.0.0.0/0`       | Secure SSL web traffic                              |
 
 ### DNS Configuration (Domain Registrar / AWS Route53)
 
 Configure the following DNS records pointing to your EC2 **Elastic IP**:
 
-| Record Type | Hostname / Subdomain | Target Value |
-| :--- | :--- | :--- |
+| Record Type  | Hostname / Subdomain    | Target Value          |
+| :----------- | :---------------------- | :-------------------- |
 | **A Record** | `dev-mis.winvinaya.com` | `YOUR_EC2_ELASTIC_IP` |
-| **A Record** | `mis.winvinaya.com` | `YOUR_EC2_ELASTIC_IP` |
-| **CNAME** | `www.mis.winvinaya.com` | `mis.winvinaya.com` |
+| **A Record** | `mis.winvinaya.com`     | `YOUR_EC2_ELASTIC_IP` |
+| **CNAME**    | `www.mis.winvinaya.com` | `mis.winvinaya.com`   |
 
 ---
 
 ## 2. SSH Key Permissions & Connecting to EC2
 
 ### Windows (PowerShell)
+
 If using Windows, fix file permissions on your `.pem` key before connecting:
+
 ```powershell
 # Reset and restrict access to current user only
 icacls.exe winvinaya-ec2.pem /reset
@@ -68,6 +71,7 @@ ssh -i winvinaya-ec2.pem ubuntu@YOUR_EC2_ELASTIC_IP
 ```
 
 ### Linux / macOS
+
 ```bash
 chmod 400 winvinaya-ec2.pem
 ssh -i winvinaya-ec2.pem ubuntu@YOUR_EC2_ELASTIC_IP
@@ -80,6 +84,7 @@ ssh -i winvinaya-ec2.pem ubuntu@YOUR_EC2_ELASTIC_IP
 You can provision the entire server automatically using the included setup script or manually.
 
 ### Option A: Automated Provisioning (Recommended)
+
 ```bash
 # Clone or copy wvismis to /var/www/wvismis
 sudo mkdir -p /var/www/wvismis
@@ -91,6 +96,7 @@ sudo /var/www/wvismis/deploy/setup-ec2.sh
 ```
 
 ### Option B: Manual Setup
+
 ```bash
 # 1. Update system packages
 sudo apt update && sudo apt upgrade -y
@@ -202,6 +208,7 @@ nano .env.dev
 ```
 
 Key values for `backend/.env.dev`:
+
 ```ini
 APP_NAME="WVISMIS - WinVinaya MIS (Development)"
 ENVIRONMENT=development
@@ -234,6 +241,7 @@ nano .env.prod
 ```
 
 Key values for `backend/.env.prod`:
+
 ```ini
 APP_NAME="WVISMIS - WinVinaya MIS"
 ENVIRONMENT=production
@@ -285,18 +293,21 @@ EOF
 You can set up each environment using `./deploy/backend-deploy.sh {dev|prod}` or manually:
 
 ### Setup Development Backend
+
 ```bash
 cd /var/www/wvismis
 ./deploy/backend-deploy.sh dev
 ```
 
 ### Setup Production Backend
+
 ```bash
 cd /var/www/wvismis
 ./deploy/backend-deploy.sh prod
 ```
 
-*What this does:*
+_What this does:_
+
 1. Creates dedicated virtual environment (`venv-dev` / `venv-prod`).
 2. Installs all packages from `requirements.txt`.
 3. Runs database migrations: `alembic upgrade head`.
@@ -307,18 +318,22 @@ cd /var/www/wvismis
 ## 8. Frontend Build & Setup
 
 ### Deploy Development Frontend
+
 ```bash
 cd /var/www/wvismis
 ./deploy/frontend-deploy.sh dev
 ```
-*Builds React bundle using `.env.dev` and deploys to `/var/www/wvismis/frontend/dist-dev`.*
+
+_Builds React bundle using `.env.dev` and deploys to `/var/www/wvismis/frontend/dist-dev`._
 
 ### Deploy Production Frontend
+
 ```bash
 cd /var/www/wvismis
 ./deploy/frontend-deploy.sh prod
 ```
-*Builds React bundle using `.env.prod` and deploys to `/var/www/wvismis/frontend/dist-prod`.*
+
+_Builds React bundle using `.env.prod` and deploys to `/var/www/wvismis/frontend/dist-prod`._
 
 ---
 
@@ -327,12 +342,14 @@ cd /var/www/wvismis
 The repository contains pre-configured Nginx site definitions in the root `nginx/` folder:
 
 1. **Copy configurations to Nginx available sites**:
+
    ```bash
    sudo cp /var/www/wvismis/nginx/dev.conf /etc/nginx/sites-available/wvismis-dev.conf
    sudo cp /var/www/wvismis/nginx/prod.conf /etc/nginx/sites-available/wvismis-prod.conf
    ```
 
 2. **Enable sites**:
+
    ```bash
    sudo ln -sf /etc/nginx/sites-available/wvismis-dev.conf /etc/nginx/sites-enabled/
    sudo ln -sf /etc/nginx/sites-available/wvismis-prod.conf /etc/nginx/sites-enabled/
@@ -359,6 +376,7 @@ sudo ./deploy/setup-ssl.sh both
 ```
 
 Or run Certbot manually:
+
 ```bash
 sudo certbot --nginx -d dev-mis.winvinaya.com --non-interactive --agree-tos --email admin@winvinaya.com --redirect
 sudo certbot --nginx -d mis.winvinaya.com -d www.mis.winvinaya.com --non-interactive --agree-tos --email admin@winvinaya.com --redirect
@@ -393,6 +411,7 @@ pm2 logs wvismis-backend-prod
 ## 12. Verification, Health Checks & Monitoring
 
 Execute the automated health check script:
+
 ```bash
 # Development check
 ./deploy/health-check.sh dev
@@ -402,6 +421,7 @@ Execute the automated health check script:
 ```
 
 Manual endpoint verification:
+
 ```bash
 # 1. Backend internal health checks
 curl -i http://localhost:8000/health
@@ -421,6 +441,7 @@ curl -i https://mis.winvinaya.com/health
 ## 13. Database Backup & Restore Strategy
 
 ### Run Manual Backup
+
 ```bash
 # Backup Development DB
 ./deploy/backup-db.sh dev
@@ -428,13 +449,17 @@ curl -i https://mis.winvinaya.com/health
 # Backup Production DB
 ./deploy/backup-db.sh prod
 ```
-*Backups are saved to `/var/www/wvismis/backups/db/` with gzip compression. The script automatically rotates and retains the latest 14 backups.*
+
+_Backups are saved to `/var/www/wvismis/backups/db/` with gzip compression. The script automatically rotates and retains the latest 14 backups._
 
 ### Automate Nightly Backups (Cronjob)
+
 ```bash
 crontab -e
 ```
+
 Add:
+
 ```cron
 # Daily DB Backups: 2:00 AM (Dev), 2:30 AM (Prod)
 0 2 * * * /var/www/wvismis/deploy/backup-db.sh dev >> /var/www/wvismis/logs/backup_cron.log 2>&1
@@ -442,6 +467,7 @@ Add:
 ```
 
 ### Restore Database
+
 ```bash
 # Restores from latest backup file automatically
 ./deploy/restore-db.sh dev
@@ -455,7 +481,9 @@ Add:
 ## 14. Rollback & Zero-Downtime Updates
 
 ### Routine Updates
+
 When deploying new code changes:
+
 ```bash
 cd /var/www/wvismis
 git pull origin main   # or develop
@@ -465,9 +493,12 @@ git pull origin main   # or develop
 ```
 
 ### Emergency Rollback
+
 If a deployment introduces a critical bug:
+
 ```bash
 cd /var/www/wvismis
 ./deploy/rollback.sh dev    # or prod
 ```
-*The rollback script automatically checks out the previous Git commit (`HEAD~1`), restores the pre-deployment database backup, redeploys the backend & frontend, and validates system health.*
+
+_The rollback script automatically checks out the previous Git commit (`HEAD~1`), restores the pre-deployment database backup, redeploys the backend & frontend, and validates system health._

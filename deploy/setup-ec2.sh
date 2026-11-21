@@ -111,7 +111,19 @@ WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'wvismis_prod')\gexec
 
 GRANT ALL PRIVILEGES ON DATABASE wvismis_dev TO wvismis_user;
 GRANT ALL PRIVILEGES ON DATABASE wvismis_prod TO wvismis_user;
+
+-- Performance tuning for 2GB RAM instance (prevents OOM & keeps queries snappy)
+ALTER SYSTEM SET shared_buffers = '256MB';
+ALTER SYSTEM SET work_mem = '8MB';
+ALTER SYSTEM SET effective_cache_size = '768MB';
+ALTER SYSTEM SET max_connections = '60';
 EOF
+
+sudo systemctl restart postgresql
+
+# Disk Space Optimization (prevents 20GB disk from filling up with system logs)
+sed -i 's/#SystemMaxUse=/SystemMaxUse=150M/' /etc/systemd/journald.conf 2>/dev/null || true
+systemctl restart systemd-journald 2>/dev/null || true
 
 # 6. Install Nginx and Certbot for SSL
 echo "🌐 6/8 Installing Nginx web server and Certbot..."

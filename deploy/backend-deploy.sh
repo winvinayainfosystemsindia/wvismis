@@ -89,6 +89,7 @@ echo "▶️ Starting FastAPI backend with PM2 ($APP_NAME on port $PORT)..."
 pm2 start "$VENV_NAME/bin/uvicorn" \
     --name "$APP_NAME" \
     --interpreter none \
+    --max-memory-restart 500M \
     -- app.main:app \
     --host 127.0.0.1 \
     --port "$PORT" \

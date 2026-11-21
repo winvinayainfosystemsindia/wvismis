@@ -311,7 +311,27 @@ _What this does:_
 1. Creates dedicated virtual environment (`venv-dev` / `venv-prod`).
 2. Installs all packages from `requirements.txt`.
 3. Runs database migrations: `alembic upgrade head`.
-4. Starts the FastAPI server via PM2 (`wvismis-backend-dev` on port 8000, `wvismis-backend-prod` on port 8002).
+4. Automatically provisions parent organization (`WinVinaya InfoSystems`) and superuser (`dharanidaran.a@winvinaya.com`) via `backend/scripts/create_superuser.py`.
+5. Starts the FastAPI server via PM2 (`wvismis-backend-dev` on port 8000, `wvismis-backend-prod` on port 8002).
+
+### Manual Superuser Creation / Password Reset Script
+
+If you ever need to create or re-sync the superuser account across environments:
+
+```bash
+cd /var/www/wvismis/backend
+
+# For Development (wvismis_dev):
+source venv-dev/bin/activate
+python scripts/create_superuser.py --env dev --verify-api
+
+# For Production (wvismis_prod):
+source venv-prod/bin/activate
+python scripts/create_superuser.py --env prod --verify-api
+
+# For Both Dev and Prod at once:
+python scripts/create_superuser.py --env all
+```
 
 ---
 

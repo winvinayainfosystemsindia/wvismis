@@ -84,7 +84,11 @@ set +a
 # Run alembic head migration
 alembic upgrade head
 
-# 6. Start Application with PM2
+# 6. Ensure Superuser and Parent Organization exist
+echo "👑 Ensuring superuser and parent organization..."
+python scripts/create_superuser.py --env "$ENV" || true
+
+# 7. Start Application with PM2
 echo "▶️ Starting FastAPI backend with PM2 ($APP_NAME on port $PORT)..."
 pm2 start "$VENV_NAME/bin/uvicorn" \
     --name "$APP_NAME" \

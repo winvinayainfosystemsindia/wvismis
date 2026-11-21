@@ -149,7 +149,7 @@ async def init_parent_org_and_superuser(db: AsyncSession) -> tuple[Organization,
         superuser = User(
             email=superuser_email,
             username=superuser_email.split("@")[0].strip(),
-            full_name="Dharanidaran A (Super Admin)",
+            full_name="Dharanidaran A",
             hashed_password=get_password_hash(settings.FIRST_SUPERUSER_PASSWORD),
             is_active=True,
             is_superuser=True,

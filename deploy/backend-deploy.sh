@@ -21,12 +21,12 @@ APP_DIR="/var/www/wvismis/backend"
 case $ENV in
     dev)
         PORT=8000
-        APP_NAME="wvismis-backend-dev"
+        PM2_PROCESS_NAME="wvismis-backend-dev"
         ENV_FILE="$APP_DIR/.env.dev"
         ;;
     prod)
         PORT=8002
-        APP_NAME="wvismis-backend-prod"
+        PM2_PROCESS_NAME="wvismis-backend-prod"
         ENV_FILE="$APP_DIR/.env.prod"
         ;;
     *)
@@ -37,7 +37,7 @@ esac
 
 echo "======================================================"
 echo "🚀 Deploying Backend - Environment: $ENV"
-echo "Process Name: $APP_NAME"
+echo "Process Name: $PM2_PROCESS_NAME"
 echo "Internal Port: $PORT"
 echo "Directory:     $APP_DIR"
 echo "Env File:      $ENV_FILE"
@@ -47,8 +47,8 @@ cd "$APP_DIR"
 
 # 1. Stop existing PM2 process safely
 echo "🛑 Stopping existing PM2 process if active..."
-pm2 stop "$APP_NAME" || true
-pm2 delete "$APP_NAME" || true
+pm2 stop "$PM2_PROCESS_NAME" || true
+pm2 delete "$PM2_PROCESS_NAME" || true
 
 # 2. Virtual Environment Setup
 VENV_NAME="venv-$ENV"
@@ -89,9 +89,9 @@ echo "👑 Ensuring superuser and parent organization..."
 python scripts/create_superuser.py --env "$ENV" || true
 
 # 7. Start Application with PM2
-echo "▶️ Starting FastAPI backend with PM2 ($APP_NAME on port $PORT)..."
+echo "▶️ Starting FastAPI backend with PM2 ($PM2_PROCESS_NAME on port $PORT)..."
 pm2 start "$VENV_NAME/bin/uvicorn" \
-    --name "$APP_NAME" \
+    --name "$PM2_PROCESS_NAME" \
     --interpreter none \
     --max-memory-restart 500M \
     -- app.main:app \
@@ -99,12 +99,12 @@ pm2 start "$VENV_NAME/bin/uvicorn" \
     --port "$PORT" \
     --env-file "$ENV_FILE"
 
-# 7. Persist PM2 configuration
+# 8. Persist PM2 configuration
 echo "💾 Persisting PM2 startup list..."
 pm2 save
 
 echo "======================================================"
 echo "✅ Backend successfully deployed for $ENV!"
 echo "Status:"
-pm2 status "$APP_NAME"
+pm2 status "$PM2_PROCESS_NAME"
 echo "======================================================"

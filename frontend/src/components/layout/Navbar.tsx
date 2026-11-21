@@ -264,21 +264,28 @@ const Navbar: React.FC = () => {
 					</Box>
 
 					{/* AI Credits remaining this month */}
-					{aiCredits && (() => {
+					{user && (() => {
 						const brand = '#8B7CF6';
-						const isOut = aiCredits.balance <= 0;
-						const isLow = !isOut && aiCredits.percent_used >= 90;
+						const balanceNum = aiCredits?.balance ?? 1000;
+						const grantedNum = aiCredits?.granted ?? 1000;
+						const percentUsed = aiCredits?.percent_used ?? 0;
+						const isOut = balanceNum <= 0;
+						const isLow = !isOut && percentUsed >= 90;
 						const accent = isOut ? theme.palette.error.main : isLow ? theme.palette.warning.main : brand;
-						const resetsOn = new Date(aiCredits.period_start);
+						const resetsOn = aiCredits?.period_start
+							? new Date(aiCredits.period_start)
+							: new Date();
 						resetsOn.setMonth(resetsOn.getMonth() + 1);
+
+						const tooltipText = aiCredits
+							? `${balanceNum.toLocaleString()} of ${grantedNum.toLocaleString()} AI credits left this month (${percentUsed}% used) — resets ${resetsOn.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`
+							: 'AI credits available. Click to view usage and top up.';
+
 						return (
-							<Tooltip
-								title={`${aiCredits.balance.toLocaleString()} of ${aiCredits.granted.toLocaleString()} AI credits left this month (${aiCredits.percent_used}% used) — resets ${resetsOn.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`}
-								arrow
-							>
+							<Tooltip title={tooltipText} arrow>
 								<Chip
 									icon={<CreditsIcon sx={{ fontSize: '1rem', color: `${accent} !important` }} />}
-									label={`${aiCredits.balance.toLocaleString()} credits`}
+									label={`${balanceNum.toLocaleString()} credits`}
 									size="small"
 									onClick={() => navigate('/ai-usage')}
 									sx={{

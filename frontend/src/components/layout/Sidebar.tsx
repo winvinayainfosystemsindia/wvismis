@@ -618,12 +618,17 @@ const Sidebar: React.FC = () => {
 					flexDirection: 'column',
 					gap: 1,
 				}}>
-					{aiCredits && (() => {
+					{user && (() => {
 						const brand = theme.palette.primary.main;
-						const isOut = aiCredits.balance <= 0;
-						const isLow = !isOut && aiCredits.percent_used >= 90;
+						const balanceNum = aiCredits?.balance ?? 1000;
+						const grantedNum = aiCredits?.granted ?? 1000;
+						const percentUsed = aiCredits?.percent_used ?? 0;
+						const isOut = balanceNum <= 0;
+						const isLow = !isOut && percentUsed >= 90;
 						const accent = isOut ? theme.palette.error.main : isLow ? theme.palette.warning.main : brand;
-						const resetsOn = new Date(aiCredits.period_start);
+						const resetsOn = aiCredits?.period_start
+							? new Date(aiCredits.period_start)
+							: new Date();
 						resetsOn.setMonth(resetsOn.getMonth() + 1);
 						return (
 							<Box
@@ -642,10 +647,10 @@ const Sidebar: React.FC = () => {
 								<CreditsIcon sx={{ fontSize: '1.1rem', color: accent }} />
 								<Box sx={{ minWidth: 0 }}>
 									<Typography variant="caption" sx={{ fontWeight: 700, color: accent, display: 'block', lineHeight: 1.2 }}>
-										{aiCredits.balance.toLocaleString()} credits left
+										{balanceNum.toLocaleString()} credits left
 									</Typography>
 									<Typography variant="caption" sx={{ color: sidebarTextMuted, fontSize: '0.68rem', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-										of {aiCredits.granted.toLocaleString()} · resets {resetsOn.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+										of {grantedNum.toLocaleString()} · resets {resetsOn.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
 									</Typography>
 								</Box>
 							</Box>

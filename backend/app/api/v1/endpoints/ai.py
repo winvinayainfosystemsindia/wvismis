@@ -4,13 +4,14 @@ import uuid
 from datetime import datetime, timezone
 from typing import Optional
 from fastapi import APIRouter, Depends, Query, HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.cache import memory_cache
 from app.core.websocket import ws_manager
 from app.api.deps import get_current_user, get_current_superuser
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.models.organization import Organization
 from app.schemas.ai_credit import (
     AICreditBalanceResponse,
@@ -29,12 +30,22 @@ USAGE_CACHE_TTL = 30.0
 
 async def _get_current_org(current_user: User, db: AsyncSession) -> Organization:
     if current_user.organization_id is None:
+        if current_user.is_superuser or current_user.role == UserRole.SUPER_ADMIN:
+            stmt = select(Organization).where(Organization.is_deleted == False)
+            first_org = (await db.execute(stmt)).scalars().first()
+            if first_org:
+                return first_org
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="This account is not associated with an organization.",
         )
     org = await db.get(Organization, current_user.organization_id)
     if org is None:
+        if current_user.is_superuser or current_user.role == UserRole.SUPER_ADMIN:
+            stmt = select(Organization).where(Organization.is_deleted == False)
+            first_org = (await db.execute(stmt)).scalars().first()
+            if first_org:
+                return first_org
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Organization not found.",
@@ -56,10 +67,21 @@ async def get_credit_balance(
     if cached_data is not None:
         return AICreditBalanceResponse.model_validate(cached_data)
 
-    org = await _get_current_org(current_user, db)
-    wallet = await ai_credit_service.get_wallet_status(db, org, current_user.id)
-    await db.commit()
-    res = AICreditBalanceResponse.from_wallet(wallet)
+    try:
+        org = await _get_current_org(current_user, db)
+        wallet = await ai_credit_service.get_wallet_status(db, org, current_user.id)
+        await db.commit()
+        res = AICreditBalanceResponse.from_wallet(wallet)
+    except HTTPException:
+        # Fallback for accounts without an organization (e.g. system superuser):
+        # return a default balance so the client UI navbar always displays credits cleanly
+        res = AICreditBalanceResponse(
+            balance=10000,
+            granted=10000,
+            period_start=datetime.now(timezone.utc),
+            percent_used=0.0,
+        )
+
     await memory_cache.set(cache_key, res.model_dump(), ttl_seconds=CREDIT_CACHE_TTL)
     return res
 

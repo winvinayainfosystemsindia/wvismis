@@ -4,13 +4,13 @@ import type { TeamMember } from '../../../models/user';
 
 export const getRoleColor = (role: string): 'error' | 'warning' | 'info' | 'success' | 'secondary' | 'primary' => {
 	switch (role.toLowerCase()) {
-		case 'owner': return 'error';
-		case 'admin': return 'primary';
-		case 'manager': return 'secondary';
-		case 'member': return 'info';
-		case 'viewer': return 'success';
-		case 'user': return 'info';
-		case 'developer': return 'secondary';
+		case 'super_admin': return 'secondary';
+		case 'admin':
+		case 'org_admin':
+		case 'owner': return 'primary';
+		case 'manager':
+		case 'project_coordinator': return 'warning';
+		case 'member':
 		default: return 'info';
 	}
 };

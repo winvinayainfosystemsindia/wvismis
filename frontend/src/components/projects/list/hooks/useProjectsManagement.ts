@@ -18,7 +18,11 @@ export const useProjectsManagement = () => {
 	const { owners } = useAppSelector((state) => state.crm);
 	const { user } = useAppSelector((state) => state.auth);
 	const [searchParams] = useSearchParams();
-	const canBulkActions = user?.role === 'admin' || user?.role === 'manager' || user?.role === 'project_coordinator';
+	const canCreateProject = Boolean(
+		user?.is_superuser ||
+		['super_admin', 'admin', 'org_admin', 'manager', 'project_coordinator'].includes(user?.role || '')
+	);
+	const canBulkActions = canCreateProject;
 
 	const [page, setPage] = useState(0);
 	const [rowsPerPage, setRowsPerPage] = useState(20);
@@ -176,6 +180,7 @@ export const useProjectsManagement = () => {
 		setDeleteTarget,
 		deleteLoading,
 
+		canCreateProject,
 		canBulkActions,
 		selectedIds,
 		bulkUpdateLoading: projectsBulkUpdateLoading,

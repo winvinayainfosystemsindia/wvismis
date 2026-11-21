@@ -156,6 +156,19 @@ const legacyResetPasswordRoute = createRoute({
 	component: () => <LegacyAuthRedirect to="/auth/reset-password" />,
 });
 
+// Tenant Login Redirects (e.g. if an outdated session/bookmark points to /org/:orgId/auth/login)
+const tenantLegacyLoginRoute = createRoute({
+	getParentRoute: () => rootRoute,
+	path: '/org/$orgId/login',
+	component: () => <Navigate to="/auth/login" replace />,
+});
+
+const tenantLegacyAuthLoginRoute = createRoute({
+	getParentRoute: () => rootRoute,
+	path: '/org/$orgId/auth/login',
+	component: () => <Navigate to="/auth/login" replace />,
+});
+
 // Public Support & Legal Pages
 const successRoute = createRoute({
 	getParentRoute: () => rootRoute,
@@ -255,6 +268,8 @@ const routeTree = rootRoute.addChildren([
 	legacyVerifyEmailRoute,
 	legacyAcceptInviteRoute,
 	legacyResetPasswordRoute,
+	tenantLegacyLoginRoute,
+	tenantLegacyAuthLoginRoute,
 	successRoute,
 	maintenanceRoute,
 	privacyPolicyRoute,

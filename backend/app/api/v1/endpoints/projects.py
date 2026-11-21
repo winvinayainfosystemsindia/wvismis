@@ -54,8 +54,22 @@ from app.services.currency import CurrencyConversionService
 router = APIRouter(prefix="/projects", tags=["Project Management"])
 
 # Every route here also depends on require_pm_module (plan-gated on Module.PROJECT_MANAGEMENT).
-require_project_access = require_roles([UserRole.ADMIN, UserRole.MANAGER, UserRole.PROJECT_COORDINATOR, UserRole.DEVELOPER])
-require_project_admin = require_roles([UserRole.ADMIN, UserRole.MANAGER, UserRole.PROJECT_COORDINATOR])
+require_project_access = require_roles([
+    UserRole.SUPER_ADMIN,
+    UserRole.ORG_ADMIN,
+    UserRole.ADMIN,
+    UserRole.MANAGER,
+    UserRole.MEMBER,
+    UserRole.PROJECT_COORDINATOR,
+    UserRole.DEVELOPER,
+])
+require_project_admin = require_roles([
+    UserRole.SUPER_ADMIN,
+    UserRole.ORG_ADMIN,
+    UserRole.ADMIN,
+    UserRole.MANAGER,
+    UserRole.PROJECT_COORDINATOR,
+])
 require_pm_module = require_module(Module.PROJECT_MANAGEMENT)
 
 # "project-tasks" is its own top-level resource (not nested under /projects) since

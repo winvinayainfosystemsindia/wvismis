@@ -172,6 +172,7 @@ const ProjectsListPage: React.FC = () => {
 		deleteTarget,
 		setDeleteTarget,
 		deleteLoading,
+		canCreateProject,
 		canBulkActions,
 		selectedIds,
 		bulkUpdateLoading,
@@ -267,6 +268,7 @@ const ProjectsListPage: React.FC = () => {
 							statusFilter={statusFilter}
 							onStatusFilterChange={handleStatusFilterChange}
 							onRefresh={refreshData}
+							canCreate={canCreateProject}
 							onCreateClick={handleCreateClick}
 							onRowClick={handleRowClick}
 							onDelete={handleDeleteRequest}

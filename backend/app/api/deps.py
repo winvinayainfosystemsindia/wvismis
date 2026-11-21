@@ -185,6 +185,9 @@ def require_roles(allowed_roles: list):
             role.value if isinstance(role, UserRole) else str(role)
             for role in allowed_roles
         ]
+        # Admin equivalence: if admin is allowed, org_admin is also treated as admin
+        if UserRole.ADMIN in allowed_roles or "admin" in allowed_role_values:
+            allowed_role_values.extend([UserRole.ORG_ADMIN.value, "org_admin"])
 
         if current_user.role.value not in allowed_role_values:
             raise HTTPException(

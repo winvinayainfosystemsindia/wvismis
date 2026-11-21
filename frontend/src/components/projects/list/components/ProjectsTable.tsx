@@ -22,6 +22,7 @@ interface ProjectsTableProps {
 	statusFilter: ProjectStatus | '';
 	onStatusFilterChange: (value: ProjectStatus | '') => void;
 	onRefresh: () => void;
+	canCreate?: boolean;
 	onCreateClick: () => void;
 	onRowClick: (project: Project) => void;
 	onDelete: (project: Project) => void;
@@ -91,6 +92,7 @@ export const ProjectsTable: React.FC<ProjectsTableProps> = ({
 	statusFilter,
 	onStatusFilterChange,
 	onRefresh,
+	canCreate = true,
 	onCreateClick,
 	onRowClick,
 	onDelete,
@@ -115,13 +117,17 @@ export const ProjectsTable: React.FC<ProjectsTableProps> = ({
 
 		const actions: TableMenuAction<Project>[] = [
 			{ label: 'View Details', icon: <Visibility fontSize="small" />, onClick: () => onRowClick(project) },
-			{
-				label: 'Delete',
-				icon: <DeleteOutline fontSize="small" />,
-				onClick: () => onDelete(project),
-				color: 'error.main',
-				divider: true,
-			},
+			...(canCreate
+				? [
+						{
+							label: 'Delete',
+							icon: <DeleteOutline fontSize="small" />,
+							onClick: () => onDelete(project),
+							color: 'error.main',
+							divider: true,
+						},
+				  ]
+				: []),
 		];
 
 		return (
@@ -257,7 +263,7 @@ export const ProjectsTable: React.FC<ProjectsTableProps> = ({
 					transform: 'translateY(-1px)',
 				},
 			})}
-			canCreate
+			canCreate={canCreate}
 			renderRow={renderRow}
 			emptyMessage="No projects yet. Convert a Won deal or create one directly to get started."
 			numSelected={selectable ? selectedIds?.size : undefined}

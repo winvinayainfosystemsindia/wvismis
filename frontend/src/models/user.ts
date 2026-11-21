@@ -18,33 +18,31 @@ export type UserRole =
 	| 'hr_manager'
 	| 'leadership';
 
-/** Default selectable organization roles */
+/** Selectable organization roles when adding/editing team members */
 export const USER_ROLES: UserRole[] = [
 	'admin',
-	'member',
-	'viewer',
 	'manager',
-	'owner',
+	'member',
 ];
 
 export const ROLE_LABELS: Record<string, string> = {
-	admin: 'Admin',
-	member: 'Member',
-	viewer: 'Viewer',
-	manager: 'Manager',
-	owner: 'Owner',
-	user: 'Member',
-	developer: 'Developer',
 	super_admin: 'Super Admin',
-	org_admin: 'Org Admin',
+	admin: 'Admin',
+	manager: 'Manager',
+	member: 'Member',
+	org_admin: 'Admin',
+	owner: 'Admin',
+	viewer: 'Member',
+	user: 'Member',
+	developer: 'Member',
+	project_coordinator: 'Manager',
 };
 
 export const ROLE_DESCRIPTIONS: Record<string, string> = {
-	admin: 'Full administration: invite users, configure modules, and manage workspace settings.',
-	member: 'Standard member: collaborate on projects, run AI operations, and access shared data.',
-	viewer: 'Read-only access: view projects, dashboards, and export reports without editing.',
-	manager: 'Operations manager: assign work, oversee team members, and view activity reports.',
-	owner: 'Organization owner: full billing, workspace governance, and account ownership.',
+	super_admin: 'Platform super administrator: global system control and cross-organization management.',
+	admin: 'Organization administrator: complete control of the organization, team members, billing, and settings.',
+	manager: 'Project & team operations: create and manage projects, tasks, and review team timesheets.',
+	member: 'Team contributor: view and collaborate on assigned projects, update tasks, and submit timesheets.',
 };
 
 /** A row in the Org Admin's Team list — matches backend's UserListItem exactly. */

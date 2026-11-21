@@ -143,8 +143,8 @@ flowchart TD
 
 1. Link Nginx site configuration files:
    ```bash
-   sudo cp deploy/nginx-dev.conf /etc/nginx/sites-available/wvismis-dev.conf
-   sudo cp deploy/nginx-prod.conf /etc/nginx/sites-available/wvismis-prod.conf
+   sudo cp nginx/dev.conf /etc/nginx/sites-available/wvismis-dev.conf
+   sudo cp nginx/prod.conf /etc/nginx/sites-available/wvismis-prod.conf
 
    sudo ln -sf /etc/nginx/sites-available/wvismis-dev.conf /etc/nginx/sites-enabled/
    sudo ln -sf /etc/nginx/sites-available/wvismis-prod.conf /etc/nginx/sites-enabled/

@@ -387,6 +387,7 @@ async def invite_user(
             "invite_url": invite_url,
         },
     )
+    logger.info("Generated invitation URL for %s: %s", user.email, invite_url)
     try:
         await send_email(
             to_email=user.email,
@@ -577,6 +578,7 @@ async def resend_user_invite(
             "invite_url": invite_url,
         },
     )
+    logger.info("Generated invitation URL for %s: %s", user.email, invite_url)
     try:
         await send_email(
             to_email=user.email,

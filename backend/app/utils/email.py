@@ -65,33 +65,40 @@ async def send_email(
     from_name = settings.EMAILS_FROM_NAME or "winvinaya"
     smtp_tls = bool(settings.SMTP_TLS)
 
-    message = MIMEMultipart("mixed")
-
     # Plain text conversion as alternative part
     plain_text = re.sub(r"<[^>]+>", " ", html_content)
     plain_text = re.sub(r"\s+", " ", plain_text).strip()
 
-    alt_part = MIMEMultipart("alternative")
-    alt_part.attach(MIMEText(plain_text, "plain", "utf-8"))
-    alt_part.attach(MIMEText(html_content, "html", "utf-8"))
-    message.attach(alt_part)
+    if attachments:
+        message = MIMEMultipart("mixed")
+        alt_part = MIMEMultipart("alternative")
+        alt_part.attach(MIMEText(plain_text, "plain", "utf-8"))
+        alt_part.attach(MIMEText(html_content, "html", "utf-8"))
+        message.attach(alt_part)
+        for filename, content in attachments:
+            part = MIMEApplication(content)
+            part.add_header("Content-Disposition", f'attachment; filename="{filename}"')
+            message.attach(part)
+    else:
+        message = MIMEMultipart("alternative")
+        message.attach(MIMEText(plain_text, "plain", "utf-8"))
+        message.attach(MIMEText(html_content, "html", "utf-8"))
 
-    message["From"] = f"{from_name} <{from_email}>"
+    display_from_name = from_name.strip() if from_name else "WinVinaya MIS"
+    if display_from_name.lower() == "winvinaya":
+        display_from_name = "WinVinaya MIS"
+
+    message["From"] = f"{display_from_name} <{from_email}>"
     message["To"] = to_email
     message["Subject"] = subject
     message["Date"] = formatdate(localtime=True)
     message["Message-ID"] = make_msgid(domain="winvinaya.com")
     message["Reply-To"] = reply_to or from_email
+    message["Auto-Submitted"] = "auto-generated"
     message["X-Mailer"] = "WinVinaya MIS Enterprise Mailer"
 
     if cc:
         message["Cc"] = ", ".join(cc)
-
-    if attachments:
-        for filename, content in attachments:
-            part = MIMEApplication(content)
-            part.add_header("Content-Disposition", f'attachment; filename="{filename}"')
-            message.attach(part)
 
     # Strategy: direct SSL on port 465, STARTTLS on 587/25
     use_tls_strategy = smtp_tls and smtp_port == 465

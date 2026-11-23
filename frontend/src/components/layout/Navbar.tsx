@@ -266,8 +266,15 @@ const Navbar: React.FC = () => {
 					{/* AI Credits remaining this month */}
 					{user && (() => {
 						const brand = '#8B7CF6';
-						const balanceNum = aiCredits?.balance ?? 1000;
-						const grantedNum = aiCredits?.granted ?? 1000;
+						const planName = (
+							user?.organization?.plan_name ||
+							(user?.organization as any)?.subscription_plan ||
+							''
+						).toLowerCase();
+						const defaultGrant = planName === 'enterprise' ? 2000 : planName === 'basic' || planName === 'starter' ? 500 : planName === 'free' ? 100 : 1000;
+
+						const balanceNum = aiCredits?.balance ?? defaultGrant;
+						const grantedNum = aiCredits?.granted ?? defaultGrant;
 						const percentUsed = aiCredits?.percent_used ?? 0;
 						const isOut = balanceNum <= 0;
 						const isLow = !isOut && percentUsed >= 90;
@@ -279,7 +286,7 @@ const Navbar: React.FC = () => {
 
 						const tooltipText = aiCredits
 							? `${balanceNum.toLocaleString()} of ${grantedNum.toLocaleString()} AI credits left this month (${percentUsed}% used) — resets ${resetsOn.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`
-							: 'AI credits available. Click to view usage and top up.';
+							: `${balanceNum.toLocaleString()} AI credits available for ${planName || 'your'} plan. Click to view usage and top up.`;
 
 						return (
 							<Tooltip title={tooltipText} arrow>

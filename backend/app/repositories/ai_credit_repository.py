@@ -73,6 +73,21 @@ class AICreditRepository:
                 reason=AICreditTransactionReason.MONTHLY_GRANT,
                 user_id=user_id,
             )
+            return wallet
+
+        # If wallet was created under a lower quota or prior plan grant (e.g. 1000 instead of 2000 for Enterprise):
+        if wallet.granted < ai_credits_monthly:
+            diff = ai_credits_monthly - wallet.granted
+            wallet.granted = ai_credits_monthly
+            wallet.balance += diff
+            await db.flush()
+            await AICreditRepository.record_grant(
+                db,
+                wallet,
+                amount=diff,
+                reason=AICreditTransactionReason.ADMIN_ADJUSTMENT,
+                user_id=user_id,
+            )
 
         return wallet
 

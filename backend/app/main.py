@@ -58,6 +58,19 @@ async def lifespan(app: FastAPI):
                         ALTER TABLE reminders ADD COLUMN public_id UUID DEFAULT gen_random_uuid();
                     END IF;
                 END $$;
+
+                -- Ensure plan AI credits match Gravio configuration
+                UPDATE plans SET ai_credits_monthly = 2000 WHERE tier = 'enterprise';
+                UPDATE plans SET ai_credits_monthly = 1000 WHERE tier = 'pro';
+                UPDATE plans SET ai_credits_monthly = 500 WHERE tier = 'basic';
+                UPDATE plans SET ai_credits_monthly = 100 WHERE tier = 'free';
+
+                -- Upgrade existing enterprise wallets to 2000 credits
+                UPDATE ai_credit_wallets
+                SET balance = balance + (2000 - granted), granted = 2000
+                WHERE organization_id IN (
+                    SELECT id FROM organizations WHERE subscription_plan = 'enterprise'
+                ) AND granted < 2000;
             """))
 
         async with AsyncSessionLocal() as session:

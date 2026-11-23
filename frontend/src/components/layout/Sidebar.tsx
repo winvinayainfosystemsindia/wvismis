@@ -620,8 +620,15 @@ const Sidebar: React.FC = () => {
 				}}>
 					{user && (() => {
 						const brand = theme.palette.primary.main;
-						const balanceNum = aiCredits?.balance ?? 1000;
-						const grantedNum = aiCredits?.granted ?? 1000;
+						const planName = (
+							user?.organization?.plan_name ||
+							(user?.organization as any)?.subscription_plan ||
+							''
+						).toLowerCase();
+						const defaultGrant = planName === 'enterprise' ? 2000 : planName === 'basic' || planName === 'starter' ? 500 : planName === 'free' ? 100 : 1000;
+
+						const balanceNum = aiCredits?.balance ?? defaultGrant;
+						const grantedNum = aiCredits?.granted ?? defaultGrant;
 						const percentUsed = aiCredits?.percent_used ?? 0;
 						const isOut = balanceNum <= 0;
 						const isLow = !isOut && percentUsed >= 90;

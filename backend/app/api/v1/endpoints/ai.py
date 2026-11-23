@@ -74,10 +74,10 @@ async def get_credit_balance(
         res = AICreditBalanceResponse.from_wallet(wallet)
     except HTTPException:
         # Fallback for accounts without an organization (e.g. system superuser):
-        # return a default balance so the client UI navbar always displays credits cleanly
+        # return enterprise tier default balance (2000) so the client UI navbar always displays credits cleanly
         res = AICreditBalanceResponse(
-            balance=10000,
-            granted=10000,
+            balance=2000,
+            granted=2000,
             period_start=datetime.now(timezone.utc),
             percent_used=0.0,
         )

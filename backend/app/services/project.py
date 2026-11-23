@@ -414,7 +414,11 @@ class ProjectService:
         """Creates a top-level task (parent_task_id is always None here)."""
         project = await ProjectService.get_project(db, project_public_id)
         data = payload.model_dump()
-        data["status_id"] = await ProjectService._resolve_status_id(db, project.id, data.pop("status_id"))
+        resolved_status_id = await ProjectService._resolve_status_id(db, project.id, data.pop("status_id"))
+        data["status_id"] = resolved_status_id
+        status_obj = await ProjectTaskStatusRepository.get_by_id(db, resolved_status_id)
+        if status_obj and status_obj.is_done_status and "completed_at" not in data:
+            data["completed_at"] = datetime.now(timezone.utc)
         task = await ProjectTaskRepository.create(db, project_id=project.id, parent_task_id=None, **data)
 
         if current_user:
@@ -434,7 +438,11 @@ class ProjectService:
         from the parent regardless of what's in the payload."""
         parent = await ProjectService.get_task(db, parent_public_id)
         data = payload.model_dump()
-        data["status_id"] = await ProjectService._resolve_status_id(db, parent.project_id, data.pop("status_id"))
+        resolved_status_id = await ProjectService._resolve_status_id(db, parent.project_id, data.pop("status_id"))
+        data["status_id"] = resolved_status_id
+        status_obj = await ProjectTaskStatusRepository.get_by_id(db, resolved_status_id)
+        if status_obj and status_obj.is_done_status and "completed_at" not in data:
+            data["completed_at"] = datetime.now(timezone.utc)
         task = await ProjectTaskRepository.create(
             db, project_id=parent.project_id, parent_task_id=parent.id, **data
         )
@@ -461,12 +469,13 @@ class ProjectService:
 
         # Auto-set completed_at when the task moves into/out of a "done" status,
         # mirroring CRMService.update_deal_task's status/completed_at handling.
-        if "status_id" in data and data["status_id"] != task.status_id:
+        if "status_id" in data:
             new_status = await ProjectTaskStatusRepository.get_by_id(db, data["status_id"])
             if not new_status or new_status.project_id != task.project_id:
                 raise NotFoundError("Task status not found")
             if new_status.is_done_status:
-                data["completed_at"] = datetime.now(timezone.utc)
+                if not task.completed_at:
+                    data["completed_at"] = datetime.now(timezone.utc)
             else:
                 data["completed_at"] = None
 

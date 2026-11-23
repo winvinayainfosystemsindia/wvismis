@@ -68,7 +68,7 @@ class ProjectRepository:
         result = await db.execute(
             select(Project)
             .options(
-                selectinload(Project.tasks),
+                selectinload(Project.tasks).selectinload(ProjectTask.status),
                 selectinload(Project.owner),
             )
             .where(Project.public_id == public_id)
@@ -164,7 +164,7 @@ class ProjectRepository:
 
         result = await db.execute(
             select(Project)
-            .options(selectinload(Project.tasks))
+            .options(selectinload(Project.tasks).selectinload(ProjectTask.status))
             .where(*conditions)
             .order_by(Project.id.desc())
             .offset((page - 1) * page_size)

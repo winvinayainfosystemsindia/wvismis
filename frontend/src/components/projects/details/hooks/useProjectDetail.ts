@@ -146,26 +146,30 @@ export const useProjectDetail = () => {
 
 	const handleTaskFormSubmit = async (payload: ProjectTaskCreate | ProjectTaskUpdate, keepOpen?: boolean): Promise<ProjectTask | void> => {
 		if (!publicId) return;
-		let createdTask: ProjectTask | undefined;
+		let createdOrUpdatedTask: ProjectTask | undefined;
 		if (editingTask) {
-			await dispatch(updateProjectTask({ taskPublicId: editingTask.public_id, payload })).unwrap();
+			createdOrUpdatedTask = await dispatch(updateProjectTask({ taskPublicId: editingTask.public_id, payload })).unwrap();
+			setEditingTask(createdOrUpdatedTask);
 			toast.success('Task updated');
 		} else if (subtaskParent) {
-			createdTask = await dispatch(createSubtask({ parentTaskPublicId: subtaskParent.public_id, payload: payload as ProjectTaskCreate })).unwrap();
+			createdOrUpdatedTask = await dispatch(createSubtask({ parentTaskPublicId: subtaskParent.public_id, payload: payload as ProjectTaskCreate })).unwrap();
 			toast.success('Sub-task created');
 		} else {
-			createdTask = await dispatch(createProjectTask({ projectPublicId: publicId, payload: payload as ProjectTaskCreate })).unwrap();
+			createdOrUpdatedTask = await dispatch(createProjectTask({ projectPublicId: publicId, payload: payload as ProjectTaskCreate })).unwrap();
 			toast.success('Task created');
 		}
+		// Sync project meta in background
+		dispatch(fetchProject(publicId));
 		if (!keepOpen) {
 			handleCloseTaskForm();
 		}
-		return createdTask;
+		return createdOrUpdatedTask;
 	};
 
 	const handleMoveTask = async (task: ProjectTask, targetStatus: ProjectTaskStatus) => {
 		try {
 			await dispatch(updateProjectTask({ taskPublicId: task.public_id, payload: { status_id: targetStatus.id } })).unwrap();
+			if (publicId) dispatch(fetchProject(publicId));
 			toast.success(`Moved to ${targetStatus.name}`);
 		} catch (err: any) {
 			toast.error(err || 'Failed to move task');
@@ -179,6 +183,7 @@ export const useProjectDetail = () => {
 		setTaskDeleteLoading(true);
 		try {
 			await dispatch(deleteProjectTask(taskDeleteTarget.public_id)).unwrap();
+			if (publicId) dispatch(fetchProject(publicId));
 			toast.success('Task deleted');
 			setTaskDeleteTarget(null);
 		} catch (err: any) {

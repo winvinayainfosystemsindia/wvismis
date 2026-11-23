@@ -443,6 +443,17 @@ export const convertDealToProject = createAsyncThunk(
 	}
 );
 
+const syncCurrentProjectTaskCounts = (state: ProjectsState) => {
+	if (!state.currentProject) return;
+	const doneStatusIds = new Set(
+		state.taskStatuses.filter((s) => s.is_done_status).map((s) => s.id)
+	);
+	state.currentProject.task_count = state.projectTasks.length;
+	state.currentProject.completed_task_count = state.projectTasks.filter(
+		(t) => t.completed_at || (t.status_id && doneStatusIds.has(t.status_id))
+	).length;
+};
+
 const projectsSlice = createSlice({
 	name: 'projects',
 	initialState,
@@ -545,6 +556,7 @@ const projectsSlice = createSlice({
 			.addCase(fetchProjectTasks.fulfilled, (state, action: PayloadAction<ProjectTask[]>) => {
 				state.projectTasksLoading = false;
 				state.projectTasks = action.payload;
+				syncCurrentProjectTaskCounts(state);
 			})
 			.addCase(fetchProjectTasks.rejected, (state) => {
 				state.projectTasksLoading = false;
@@ -564,6 +576,7 @@ const projectsSlice = createSlice({
 			.addCase(createProjectTask.fulfilled, (state, action: PayloadAction<ProjectTask>) => {
 				state.taskMutating = false;
 				state.projectTasks = [...state.projectTasks, action.payload];
+				syncCurrentProjectTaskCounts(state);
 			})
 			.addCase(createProjectTask.rejected, (state, action: PayloadAction<any>) => {
 				state.taskMutating = false;
@@ -573,6 +586,7 @@ const projectsSlice = createSlice({
 			.addCase(createSubtask.fulfilled, (state, action: PayloadAction<ProjectTask>) => {
 				state.taskMutating = false;
 				state.projectTasks = [...state.projectTasks, action.payload];
+				syncCurrentProjectTaskCounts(state);
 			})
 			.addCase(createSubtask.rejected, (state, action: PayloadAction<any>) => {
 				state.taskMutating = false;
@@ -585,8 +599,17 @@ const projectsSlice = createSlice({
 				const { taskPublicId, payload } = action.meta.arg;
 				const idx = state.projectTasks.findIndex((t) => t.public_id === taskPublicId);
 				if (idx !== -1) {
-					if (payload.status_id !== undefined) state.projectTasks[idx].status_id = payload.status_id;
+					if (payload.status_id !== undefined) {
+						state.projectTasks[idx].status_id = payload.status_id;
+						const status = state.taskStatuses.find((s) => s.id === payload.status_id);
+						if (status?.is_done_status) {
+							state.projectTasks[idx].completed_at = new Date().toISOString();
+						} else if (status) {
+							state.projectTasks[idx].completed_at = undefined;
+						}
+					}
 					if (payload.assignee_id !== undefined) state.projectTasks[idx].assignee_id = payload.assignee_id;
+					syncCurrentProjectTaskCounts(state);
 				}
 			})
 			.addCase(updateProjectTask.fulfilled, (state, action: PayloadAction<ProjectTask>) => {
@@ -594,6 +617,7 @@ const projectsSlice = createSlice({
 				state.projectTasks = state.projectTasks.map((t) =>
 					t.public_id === action.payload.public_id ? action.payload : t
 				);
+				syncCurrentProjectTaskCounts(state);
 			})
 			.addCase(updateProjectTask.rejected, (state, action: PayloadAction<any>) => {
 				state.taskMutating = false;
@@ -617,6 +641,7 @@ const projectsSlice = createSlice({
 					}
 				}
 				state.projectTasks = state.projectTasks.filter((t) => !deletedIds.has(t.id));
+				syncCurrentProjectTaskCounts(state);
 			})
 
 			// Task history
@@ -640,6 +665,7 @@ const projectsSlice = createSlice({
 			.addCase(fetchTaskStatuses.fulfilled, (state, action: PayloadAction<ProjectTaskStatus[]>) => {
 				state.taskStatusesLoading = false;
 				state.taskStatuses = action.payload;
+				syncCurrentProjectTaskCounts(state);
 			})
 			.addCase(fetchTaskStatuses.rejected, (state) => {
 				state.taskStatusesLoading = false;
@@ -648,6 +674,7 @@ const projectsSlice = createSlice({
 			.addCase(updateTaskStatuses.fulfilled, (state, action: PayloadAction<ProjectTaskStatus[]>) => {
 				state.taskStatusMutating = false;
 				state.taskStatuses = action.payload;
+				syncCurrentProjectTaskCounts(state);
 			})
 			.addCase(updateTaskStatuses.rejected, (state, action: PayloadAction<any>) => {
 				state.taskStatusMutating = false;

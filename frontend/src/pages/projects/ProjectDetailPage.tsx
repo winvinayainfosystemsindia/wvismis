@@ -62,6 +62,7 @@ const ProjectDetailPage: React.FC = () => {
 						<ProjectDetailHeader
 							project={project}
 							tasks={tasks}
+							statuses={taskStatuses}
 							owners={owners}
 							onBack={handleBack}
 							onEdit={handleEditClick}

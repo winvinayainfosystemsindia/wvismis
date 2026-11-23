@@ -24,12 +24,13 @@ import { formatMoney } from '../../../../utils/currency';
 import projectService from '../../../../services/projectService';
 import ProjectShareDialog from '../forms/ProjectShareDialog';
 import type { Project, ProjectBudgetActuals } from '../../../../models/projects/project';
-import type { ProjectTask } from '../../../../models/projects/projectTask';
+import type { ProjectTask, ProjectTaskStatus } from '../../../../models/projects/projectTask';
 import type { CRMOwnerOption } from '../../../../models/crm/owner';
 
 interface ProjectDetailHeaderProps {
 	project: Project;
 	tasks: ProjectTask[];
+	statuses?: ProjectTaskStatus[];
 	owners: CRMOwnerOption[];
 	onBack: () => void;
 	onEdit: () => void;
@@ -81,7 +82,7 @@ const FactItem: React.FC<{ icon: React.ReactNode; label: string; value: React.Re
 	</Stack>
 );
 
-export const ProjectDetailHeader: React.FC<ProjectDetailHeaderProps> = ({ project, tasks, owners, onBack, onEdit, onAddTask, onManageStages }) => {
+export const ProjectDetailHeader: React.FC<ProjectDetailHeaderProps> = ({ project, tasks, statuses = [], owners, onBack, onEdit, onAddTask, onManageStages }) => {
 	const theme = useTheme();
 	const { formatDate } = useDateTime();
 	const [expanded, setExpanded] = useState(false);
@@ -123,9 +124,29 @@ export const ProjectDetailHeader: React.FC<ProjectDetailHeaderProps> = ({ projec
 		default: theme.palette.text.disabled,
 	}[statusTone];
 
-	const taskCount = project.task_count ?? 0;
-	const completedCount = project.completed_task_count ?? 0;
-	const taskPct = taskCount > 0 ? Math.round((completedCount / taskCount) * 100) : 0;
+	// Set of status IDs that represent completed/done states
+	const doneStatusIdSet = useMemo(() => {
+		return new Set(statuses.filter((s) => s.is_done_status).map((s) => s.id));
+	}, [statuses]);
+
+	// Live reactive task counts derived from the loaded tasks list so progress updates instantaneously
+	// without requiring any page reload.
+	const { taskCount, completedCount, taskPct } = useMemo(() => {
+		if (tasks && tasks.length > 0) {
+			const count = tasks.length;
+			const completed = tasks.filter((t) => {
+				if (t.completed_at) return true;
+				if (t.status_id && doneStatusIdSet.has(t.status_id)) return true;
+				return false;
+			}).length;
+			const pct = count > 0 ? Math.round((completed / count) * 100) : 0;
+			return { taskCount: count, completedCount: completed, taskPct: pct };
+		}
+		const count = project.task_count ?? 0;
+		const completed = project.completed_task_count ?? 0;
+		const pct = count > 0 ? Math.round((completed / count) * 100) : 0;
+		return { taskCount: count, completedCount: completed, taskPct: pct };
+	}, [tasks, doneStatusIdSet, project.task_count, project.completed_task_count]);
 
 	const isOverdue = !!project.end_date
 		&& dayjs(project.end_date).isBefore(dayjs(), 'day')

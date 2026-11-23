@@ -116,7 +116,7 @@ class ProjectResponse(ProjectBase):
         data.task_count = len(non_deleted_tasks)
         data.completed_task_count = len([
             t for t in non_deleted_tasks
-            if t.completed_at is not None
+            if t.completed_at is not None or (hasattr(t, "status") and t.status and t.status.is_done_status)
         ])
         return data
 

@@ -8,6 +8,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from sqlalchemy.exc import SQLAlchemyError
 from pydantic import ValidationError
 from loguru import logger
+from app.middleware.exceptions import AppError
 
 
 class ErrorHandlerMiddleware(BaseHTTPMiddleware):
@@ -16,6 +17,17 @@ class ErrorHandlerMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: Callable):
         try:
             return await call_next(request)
+
+        except AppError as e:
+            logger.warning(f"Application error on {request.url.path}: {e.message} (status {e.status_code})")
+            return JSONResponse(
+                status_code=e.status_code,
+                content={
+                    "error": e.error_code,
+                    "message": e.message,
+                    "detail": e.detail,
+                },
+            )
 
         except ValidationError as e:
             logger.error(f"Validation error on {request.url.path}: {str(e)}")

@@ -61,6 +61,7 @@ class ProjectService:
                     is_initial_status=s.get("is_initial_status", False),
                     is_done_status=s.get("is_done_status", False),
                     project_id=project.id,
+                    organization_id=project.organization_id,
                 )
             )
         return created
@@ -162,7 +163,7 @@ class ProjectService:
     async def create_project(
         db: AsyncSession, payload: ProjectCreate, current_user: Optional[User] = None,
     ) -> Project:
-        org_id = tenant_context.get()
+        org_id = current_user.organization_id if current_user and current_user.organization_id else tenant_context.get()
         if org_id is not None:
             await ProjectService.check_project_limit(db, org_id)
 
@@ -170,6 +171,8 @@ class ProjectService:
         template_key = data.get("template_key")
         custom_tasks = data.pop("custom_tasks", None)
         custom_stages = data.pop("custom_stages", None)
+        if org_id is not None and "organization_id" not in data:
+            data["organization_id"] = org_id
 
         project = await ProjectRepository.create(db, **data)
 
@@ -184,6 +187,7 @@ class ProjectService:
                     is_done_status=s.get("is_done_status", False),
                     custom_fields=s.get("custom_fields"),
                     project_id=project.id,
+                    organization_id=project.organization_id,
                 )
         else:
             await ProjectService.seed_project_task_statuses(db, project, template_key)
